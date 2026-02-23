@@ -1,6 +1,6 @@
 {
   "name": "kloak-client",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "Desktop client for Kloak",
   "main": "src/main/index.js",
   "homepage": "https://kloak.app",
