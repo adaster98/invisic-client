@@ -1,0 +1,89 @@
+/* Global UI Components */
+#kloak-addon-pane {
+    display: none;
+    position: absolute;
+    right: 0; bottom: 0; left: 224px;
+    background: #0f0f0f;
+    z-index: 999; padding: 40px; overflow-y: auto;
+    border-bottom-right-radius: inherit;
+}
+#kloak-addon-pane.active { display: block; }
+
+.kloak-esc-wrapper { position: absolute; top: 40px; right: 40px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+#kloak-addon-close { background: #18181b; border: 1px solid #27272a; color: #a1a1aa; cursor: pointer; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+#kloak-addon-close:hover { background: #27272a; color: #fff; }
+.kloak-esc-text { font-size: 11px; font-weight: 600; color: #71717a; letter-spacing: 0.5px; }
+
+.addon-header-container { margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid #2a2a2a; padding-right: 60px; }
+.addon-header-container h2 { font-size: 20px; font-weight: 600; color: #fff; margin: 0 0 4px 0; }
+.addon-header-container p { font-size: 14px; color: #a1a1aa; margin: 0; }
+
+.addon-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.addon-card { background: #161616; border: 1px solid #2a2a2a; border-radius: 12px; padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.addon-info { flex: 1; min-width: 0; }
+.addon-info h3 { margin: 0 0 4px 0; font-size: 15px; color: #E0E0E0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.addon-info p { margin: 0; font-size: 13px; color: #949494; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.addon-controls { display: flex; align-items: center; gap: 12px; }
+
+.addon-btn-icon { background: #262626; border: 1px solid transparent; color: #949494; padding: 6px; border-radius: 6px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+.addon-btn-icon:hover { background: #333; color: #E0E0E0; }
+.addon-toggle { position: relative; width: 44px; height: 24px; background: #333; border-radius: 24px; cursor: pointer; transition: background 0.3s; flex-shrink: 0; }
+.addon-toggle.enabled { background: #10b981; }
+.addon-toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: white; border-radius: 50%; transition: transform 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+.addon-toggle.enabled::after { transform: translateX(20px); }
+
+/* Settings Modal */
+#kloak-addon-settings-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999999; justify-content: center; align-items: center; border-radius: 20px; overflow: hidden; }
+.addon-settings-box { background: #0f0f0f; border: 1px solid #2a2a2a; border-radius: 12px; padding: 24px; width: 500px; max-height: 80vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7); display: flex; flex-direction: column; }
+.addon-settings-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2a2a2a; padding-bottom: 16px; margin-bottom: 16px; }
+.addon-settings-header h3 { margin: 0; color: #E0E0E0; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+.addon-settings-content { color: #949494; font-size: 14px; line-height: 1.5; }
+
+/* Modal Bridged UI */
+.kloak-modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+    z-index: 9999999; display: flex; align-items: center; justify-content: center;
+}
+
+.kloak-modal-container {
+    background: #111; border: 1px solid #2a2a2a; border-radius: 12px;
+    padding: 28px; width: 400px; color: #e0e0e0;
+}
+
+.kloak-link-preview {
+    margin: 0 0 20px 0; font-size: 12px; color: #71717a;
+    word-break: break-all; background: #1c1c1c; padding: 8px 10px;
+    border-radius: 6px;
+}
+
+.kloak-btn-primary {
+    padding: 8px 20px; border-radius: 6px; border: none;
+    background: #10b981; color: #000; cursor: pointer;
+    font-size: 14px; font-weight: 600;
+}
+
+.kloak-btn-secondary {
+    padding: 8px 20px; border-radius: 6px; border: 1px solid #3f3f46;
+    background: #27272a; color: #a1a1aa; cursor: pointer; font-size: 14px;
+}
+
+#kloak-update-banner {
+    position: fixed; top: 40px; right: 16px; z-index: 9999999;
+    background: #10b981; color: #000; padding: 10px 16px;
+    border-radius: 8px; font-size: 13px; font-weight: 600;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4); cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+}
+
+/* Screen Picker */
+.screen-source-card {
+    background: #161616; border: 1px solid #2a2a2a; border-radius: 8px;
+    padding: 8px; cursor: pointer; text-align: center;
+    transition: border-color 0.2s;
+}
+.screen-source-card:hover { border-color: #10b981; }
+.screen-source-card img { width: 100%; border-radius: 4px; display: block; }
+.screen-source-card p {
+    margin: 6px 0 0 0; font-size: 12px; color: #a1a1aa;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}

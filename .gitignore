@@ -1,2 +1,5 @@
 client/node_modules/
 client/dist/
+PROJECT_SPEC.md
+.agents/
+client/addons/addon-states.json

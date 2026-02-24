@@ -12,6 +12,10 @@ if (!fs.existsSync(addonsDir)) {
     fs.mkdirSync(addonsDir, { recursive: true });
 }
 
+console.log(`[Addons] Directory: ${addonsDir}`);
+console.log(`[Addons] States file: ${addonStatesPath}`);
+
+
 function openAddonsFolder(subPath) {
     let targetPath = addonsDir;
     if (subPath && typeof subPath === 'string') {
