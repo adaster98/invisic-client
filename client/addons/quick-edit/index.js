@@ -1,101 +1,113 @@
 (async () => {
-    const ADDON_ID = 'quick-edit';
+  const ADDON_ID = "quick-edit";
 
-    // Fetch config once on startup
-    let config = { maxMessages: 10 };
-    try {
-        if (window.electronAPI && window.electronAPI.getAddonConfig) {
-            const savedConfig = await window.electronAPI.getAddonConfig(ADDON_ID);
-            if (savedConfig && savedConfig.maxMessages) {
-                config.maxMessages = parseInt(savedConfig.maxMessages, 10);
-            }
+  // Fetch config once on startup
+  let config = { maxMessages: 10 };
+  try {
+    if (window.electronAPI && window.electronAPI.getAddonConfig) {
+      const savedConfig = await window.electronAPI.getAddonConfig(ADDON_ID);
+      if (savedConfig && savedConfig.maxMessages) {
+        config.maxMessages = parseInt(savedConfig.maxMessages, 10);
+      }
+    }
+  } catch (e) {
+    console.error(`[${ADDON_ID}] Failed to load config:`, e);
+  }
+
+  let upArrowHandler = null;
+
+  // Register the Addon
+  window.KloakAddons.registerAddon({
+    id: ADDON_ID,
+    name: "Quick Edit",
+    description: "Press Up Arrow to instantly edit your last sent message.",
+
+    onEnable: () => {
+      let isSearching = false;
+
+      upArrowHandler = async (e) => {
+        if (e.key !== "ArrowUp") return;
+
+        const target = e.target;
+        const isTextInput =
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "INPUT" ||
+          target.isContentEditable;
+        if (!isTextInput) return;
+
+        const value =
+          target.value !== undefined ? target.value : target.textContent;
+        if (value.trim() !== "") return;
+
+        e.preventDefault();
+        if (isSearching) return;
+        isSearching = true;
+
+        // Grab recent messages based on limit
+        const messages = Array.from(
+          document.querySelectorAll(
+            'div[id^="message-"], div[id^="dm-message-"]',
+          ),
+        )
+          .reverse()
+          .slice(0, config.maxMessages);
+
+        for (const msg of messages) {
+          // Look for the inline Edit button
+          const editBtn = msg.querySelector('button[aria-label="Edit"]');
+
+          if (editBtn) {
+            editBtn.click();
+
+            // Wait for React to mount the textarea and grab focus
+            let attempts = 0;
+            const focusInterval = setInterval(() => {
+              attempts++;
+              const editBox = msg.querySelector("textarea");
+
+              if (editBox) {
+                clearInterval(focusInterval);
+                editBox.focus();
+                const textLen = editBox.value.length;
+                editBox.setSelectionRange(textLen, textLen);
+
+                // Double-tap the focus just in case React tries to steal it back
+                setTimeout(() => {
+                  editBox.focus();
+                  editBox.setSelectionRange(textLen, textLen);
+                  // Grab the entire message group wrapper
+                  const messageContainer = editBox.closest(".group") || msg;
+                  // Scroll the whole block into view
+                  messageContainer.scrollIntoView({
+                    behavior: "smooth",
+                    block: "nearest",
+                  });
+                }, 50);
+              } else if (attempts > 50) {
+                clearInterval(focusInterval); // Give up after 500ms
+              }
+            }, 10);
+
+            isSearching = false;
+            return; // Stop searching
+          }
         }
-    } catch (e) { console.error(`[${ADDON_ID}] Failed to load config:`, e); }
 
-    let upArrowHandler = null;
+        isSearching = false;
+      };
 
-    // Register the Addon
-    window.KloakAddons.registerAddon({
-        id: ADDON_ID,
-        name: 'Quick Edit',
-        description: 'Press Up Arrow to instantly edit your last sent message.',
+      document.addEventListener("keydown", upArrowHandler, true);
+    },
 
-        onEnable: () => {
-            let isSearching = false;
+    onDisable: () => {
+      if (upArrowHandler) {
+        document.removeEventListener("keydown", upArrowHandler, true);
+        upArrowHandler = null;
+      }
+    },
 
-            upArrowHandler = async (e) => {
-                if (e.key !== 'ArrowUp') return;
-
-                const target = e.target;
-                const isTextInput = target.tagName === 'TEXTAREA' || target.tagName === 'INPUT' || target.isContentEditable;
-                if (!isTextInput) return;
-
-                const value = target.value !== undefined ? target.value : target.textContent;
-                if (value.trim() !== '') return;
-
-                e.preventDefault();
-                if (isSearching) return;
-                isSearching = true;
-
-                // Grab recent messages based on limit
-                const messages = Array.from(document.querySelectorAll('div[id^="message-"]'))
-                .reverse()
-                .slice(0, config.maxMessages);
-
-                for (const msg of messages) {
-                    // Look for the inline Edit button
-                    const editBtn = msg.querySelector('button[aria-label="Edit"]');
-
-                    if (editBtn) {
-
-                        editBtn.click();
-
-                        // Wait for React to mount the textarea and grab focus
-                        let attempts = 0;
-                        const focusInterval = setInterval(() => {
-                            attempts++;
-                            const editBox = msg.querySelector('textarea');
-
-                            if (editBox) {
-                                clearInterval(focusInterval);
-                                editBox.focus();
-                                const textLen = editBox.value.length;
-                                editBox.setSelectionRange(textLen, textLen);
-
-                                // Double-tap the focus just in case React tries to steal it back
-                                setTimeout(() => {
-                                    editBox.focus();
-                                    editBox.setSelectionRange(textLen, textLen);
-                                    // Grab the entire message group wrapper
-                                    const messageContainer = editBox.closest('.group') || msg;
-                                    // Scroll the whole block into view
-                                    messageContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                                }, 50);
-                            } else if (attempts > 50) {
-                                clearInterval(focusInterval); // Give up after 500ms
-                            }
-                        }, 10);
-
-                        isSearching = false;
-                        return; // Stop searching
-                    }
-                }
-
-                isSearching = false;
-            };
-
-            document.addEventListener('keydown', upArrowHandler, true);
-        },
-
-        onDisable: () => {
-            if (upArrowHandler) {
-                document.removeEventListener('keydown', upArrowHandler, true);
-                upArrowHandler = null;
-            }
-        },
-
-        renderSettings: (container) => {
-            container.innerHTML = `
+    renderSettings: (container) => {
+      container.innerHTML = `
             <div style="color: #E0E0E0; display: flex; flex-direction: column; gap: 16px;">
             <p style="margin: 0; color: #a1a1aa;">Configure how far up the chat the script will search for your last message.</p>
             <div>
@@ -109,20 +121,26 @@
             </div>
             `;
 
-            container.querySelector('#qe-save-btn').addEventListener('click', () => {
-                let newLimit = parseInt(container.querySelector('#qe-limit-input').value, 10);
-                if (isNaN(newLimit) || newLimit < 1) newLimit = 10;
+      container.querySelector("#qe-save-btn").addEventListener("click", () => {
+        let newLimit = parseInt(
+          container.querySelector("#qe-limit-input").value,
+          10,
+        );
+        if (isNaN(newLimit) || newLimit < 1) newLimit = 10;
 
-                config.maxMessages = newLimit;
-                container.querySelector('#qe-limit-input').value = newLimit;
+        config.maxMessages = newLimit;
+        container.querySelector("#qe-limit-input").value = newLimit;
 
-                if (window.electronAPI && window.electronAPI.saveAddonConfig) {
-                    window.electronAPI.saveAddonConfig({ addonId: ADDON_ID, data: config });
-                    const msg = container.querySelector('#qe-saved-msg');
-                    msg.style.opacity = '1';
-                    setTimeout(() => msg.style.opacity = '0', 2000);
-                }
-            });
+        if (window.electronAPI && window.electronAPI.saveAddonConfig) {
+          window.electronAPI.saveAddonConfig({
+            addonId: ADDON_ID,
+            data: config,
+          });
+          const msg = container.querySelector("#qe-saved-msg");
+          msg.style.opacity = "1";
+          setTimeout(() => (msg.style.opacity = "0"), 2000);
         }
-    });
+      });
+    },
+  });
 })();

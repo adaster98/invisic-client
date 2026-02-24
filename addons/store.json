@@ -20,8 +20,8 @@
   "quick-edit": {
     "name": "Quick Edit",
     "description": "Press Up Arrow to edit your last sent message.",
-    "version": "1.0.1",
-    "url": "https://codeberg.org/adaster98/kloak-client-unofficial/raw/branch/main/addons/release/quick-edit/quick-edit-1.0.2.zip"
+    "version": "1.0.3",
+    "url": "https://codeberg.org/adaster98/kloak-client-unofficial/raw/branch/main/addons/release/quick-edit/quick-edit-1.0.3.zip"
   },
   "stealth-mode": {
     "name": "Stealth Mode",
