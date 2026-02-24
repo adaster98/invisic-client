@@ -31,83 +31,84 @@ if (window.electronAPI) {
 
   // Destructive Action Hijacker
 
-  // Track target button before click
-  let lastDestructiveButton = null;
-  const trackDestructiveBtn = (e) => {
-    const target =
-      e.target.closest(".text-destructive") ||
-      e.target.closest('div[role="menuitem"]');
-    if (
-      target &&
-      /Leave|Quit|Exit/i.test(target.innerText || target.textContent || "")
-    ) {
-      lastDestructiveButton = target;
+  const handleDestructiveIntercept = (e) => {
+    // Find the Leave Server button
+    let target = e.target.closest(".text-destructive");
+    if (!target) {
+      const potential = e.target.closest('div[role="menuitem"]');
+      if (potential && /Leave|Quit|Exit/i.test(potential.textContent || ""))
+        target = potential;
+    }
+
+    // If it's not the button, or currently not doing a synthetic click playback, let it pass
+    if (!target || target.dataset.kloakBypass) return;
+
+    // Stop the event instantly so the menu stays open
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+
+    // Only trigger the modal on the initial 'pointerdown' (ignore the trailing mousedown/click)
+    if (e.type === "pointerdown") {
+      if (document.querySelector(".kloak-modal-overlay")) return;
+
+      renderDestructiveModal(
+        "Leave Server",
+        "Are you sure you want to leave this server? This action cannot be undone.",
+        "Leave Server",
+        (confirmed) => {
+          if (confirmed) {
+            // Allow our synthetic events to bypass this interceptor
+            target.dataset.kloakBypass = "true";
+
+            // Temporarily override the app's native confirm to auto-approve instantly
+            const origConfirm = window.confirm;
+            window.confirm = () => true;
+
+            // Left-click sequence that Radix will accept
+            const optsDown = {
+              bubbles: true,
+              cancelable: true,
+              view: window,
+              button: 0,
+              buttons: 1,
+            };
+            const optsUp = {
+              bubbles: true,
+              cancelable: true,
+              view: window,
+              button: 0,
+              buttons: 0,
+            };
+
+            target.dispatchEvent(new PointerEvent("pointerdown", optsDown));
+            target.dispatchEvent(new MouseEvent("mousedown", optsDown));
+            target.dispatchEvent(new PointerEvent("pointerup", optsUp));
+            target.dispatchEvent(new MouseEvent("mouseup", optsUp));
+            target.dispatchEvent(new MouseEvent("click", optsUp));
+
+            // Clean up the bypass and restore native confirm after the API fires
+            setTimeout(() => {
+              window.confirm = origConfirm;
+              if (target) delete target.dataset.kloakBypass;
+            }, 500);
+          } else {
+            // If they cancel, cleanly close the background menu for them
+            document.dispatchEvent(
+              new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+            );
+          }
+        },
+      );
     }
   };
 
-  // Track via hover or focus
-  document.addEventListener("pointermove", trackDestructiveBtn, true);
-  document.addEventListener("focusin", trackDestructiveBtn, true);
-
-  // Intercept native confirm
-  let modalConfirmedFlag = false;
-  window.confirm = (message) => {
-    if (window.electronAPI.log)
-      window.electronAPI.log(`Kloak: window.confirm intercepted: ${message}`);
-
-    // Allow simulated clicks
-    if (modalConfirmedFlag) return true;
-
-    // Prevent duplicate modals
-    if (document.querySelector(".kloak-modal-overlay")) return false;
-
-    // Radix menu unmounts natively, clearing focus traps prior to render
-    renderDestructiveModal(
-      "Destructive Action",
-      message ||
-        "Are you sure you want to perform this action? It cannot be undone.",
-      "Confirm",
-      (confirmed) => {
-        if (confirmed) {
-          modalConfirmedFlag = true;
-
-          if (lastDestructiveButton) {
-            try {
-              // Extract React props from unmounted node
-              const reactPropsKey = Object.keys(lastDestructiveButton).find(
-                (k) => k.startsWith("__reactProps$"),
-              );
-              const props = reactPropsKey
-                ? lastDestructiveButton[reactPropsKey]
-                : null;
-
-              if (props) {
-                if (typeof props.onSelect === "function") {
-                  props.onSelect(new Event("select"));
-                } else if (typeof props.onClick === "function") {
-                  props.onClick({
-                    preventDefault: () => {},
-                    stopPropagation: () => {},
-                  });
-                }
-              } else {
-                // Fallback
-                lastDestructiveButton.click();
-              }
-            } catch (e) {
-              console.error("Kloak Redispatch Error:", e);
-            }
-          }
-
-          // Reset bypass flag
-          setTimeout(() => (modalConfirmedFlag = false), 200);
-        }
-      },
-    );
-
-    // Block native execution
-    return false;
-  };
+  // Intercept all phases of the click to completely paralyze Radix
+  document.addEventListener("pointerdown", handleDestructiveIntercept, true);
+  document.addEventListener("mousedown", handleDestructiveIntercept, true);
+  document.addEventListener("pointerup", handleDestructiveIntercept, true);
+  document.addEventListener("mouseup", handleDestructiveIntercept, true);
+  document.addEventListener("click", handleDestructiveIntercept, true);
   // End of Destructive Action Hijacker
 
   // Modal Renderers
