@@ -49,15 +49,30 @@ You can also choose to have a settings menu, else it will fall back to an inform
 
 ### Using the KloakAddonAPI
 
-The `window.KloakAddonAPI` provides easy access to user credentials and profile data, handling the complexities of intercepting network requests for you.
+The `window.KloakAddonAPI` provides easy access to user credentials, profile data, handling the complexities of intercepting network requests, configuration files and file access.
 
-**Available Properties:**
+#### RPC API
 
 - `api.userID`: Unique UUID for the logged-in user.
 - `api.xHash`: The X-Key-Hash required for many RPC requests.
 - `api.userProfile`: Full profile object (username, display name, avatar, bio, status).
 - `api.apiKey`: Supabase API key for RPC headers.
 - `api.authToken`: JWT Authorization token for RPC headers.
+
+#### Settings API
+
+- `api.settings.get(addonId)`: Returns a Promise that resolves to the addon's `config.json` object.
+- `api.settings.set(addonId, data)`: Saves the provided data object to the addon's `config.json`.
+
+#### File System API
+
+Helper methods to manage files within your addon's own directory (`client/addons/<addon-id>/`).
+
+- `api.fs.read(addonId, filePath)`: Returns a Promise that resolves to the string content of the file.
+- `api.fs.write(addonId, filePath, data)`: Writes string data to the specified file (creates directories if needed).
+- `api.fs.list(addonId, subDir)`: Returns a Promise resolving to a list of filenames in the directory.
+- `api.fs.delete(addonId, filePath)`: Deletes the specified file or directory.
+- `api.fs.exists(addonId, filePath)`: Returns a Promise resolving to a boolean.
 
 **Example Usage:**
 Since credentials may change or be captured after an addon loads, use `onReady` to ensure the data is available:

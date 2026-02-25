@@ -2,7 +2,7 @@
  * ==========================================
  * KLOAK ADDON TEMPLATE
  * ==========================================
- * Folder: /addons/template-addon/
+ * Folder: /addons/template/
  * File: index.js
  * Drop this folder into your addons directory to
  * see a complete, working boilerplate!
@@ -10,7 +10,7 @@
 
 (() => {
   // 1. DEFINE THE ID HERE! (This must exactly match your folder name)
-  const ADDON_ID = "template-addon";
+  const ADDON_ID = "template";
 
   window.KloakAddons.registerAddon({
     // --- 1. METADATA ---
@@ -43,6 +43,27 @@
           // These keys are required for making authenticated RPC calls
           // api.apiKey
           // api.authToken
+
+          /**
+           * NEW: File System API
+           * Every addon has its own isolated folder.
+           * You can read, write, list and delete files here securely.
+           */
+          const testFile = "hello.txt";
+          const testData = "Hello from the FS API!";
+
+          api.fs
+            .write(ADDON_ID, testFile, testData)
+            .then(() => {
+              console.log(`[${ADDON_ID}] Successfully wrote to ${testFile}`);
+              return api.fs.read(ADDON_ID, testFile);
+            })
+            .then((content) => {
+              console.log(`[${ADDON_ID}] Read from ${testFile}:`, content);
+            })
+            .catch((err) => {
+              console.error(`[${ADDON_ID}] FS Error:`, err);
+            });
         });
       }
     },
@@ -60,11 +81,14 @@
       // B. Fetch this specific addon's config.json safely
       let config = {};
       try {
-        if (window.electronAPI && window.electronAPI.getAddonConfig) {
+        // NEW WAY (Recommended): Use the KloakAddonAPI settings provider
+        if (window.KloakAddonAPI && window.KloakAddonAPI.settings) {
+          config = await window.KloakAddonAPI.settings.get(ADDON_ID);
+        }
+        // OLD WAY: Direct Electron IPC (still works!)
+        else if (window.electronAPI && window.electronAPI.getAddonConfig) {
           const savedConfig = await window.electronAPI.getAddonConfig(ADDON_ID);
-          if (savedConfig) {
-            config = savedConfig;
-          }
+          if (savedConfig) config = savedConfig;
         }
       } catch (err) {
         console.error(`[${ADDON_ID}] Failed to load config:`, err);
@@ -118,7 +142,13 @@
         config.enableFeature = checkboxInput.checked;
 
         // Send it back through the secure bridge to write to the hard drive
-        if (window.electronAPI && window.electronAPI.saveAddonConfig) {
+        if (window.KloakAddonAPI && window.KloakAddonAPI.settings) {
+          window.KloakAddonAPI.settings.set(ADDON_ID, config);
+
+          // Trigger notice
+          savedMsg.style.opacity = "1";
+          setTimeout(() => (savedMsg.style.opacity = "0"), 2000);
+        } else if (window.electronAPI && window.electronAPI.saveAddonConfig) {
           window.electronAPI.saveAddonConfig({
             addonId: ADDON_ID,
             data: config,

@@ -33,6 +33,18 @@ const api = {
   saveAddonConfig: (data) => ipcRenderer.send("save-addon-config", data),
   getThemeFiles: () => ipcRenderer.invoke("get-theme-files"),
 
+  // FS API for Addons
+  readAddonFile: (addonId, filePath) =>
+    ipcRenderer.invoke("addon-fs-read", { addonId, filePath }),
+  writeAddonFile: (addonId, filePath, data) =>
+    ipcRenderer.invoke("addon-fs-write", { addonId, filePath, data }),
+  listAddonFiles: (addonId, subDir) =>
+    ipcRenderer.invoke("addon-fs-list", { addonId, subDir }),
+  deleteAddonFile: (addonId, filePath) =>
+    ipcRenderer.invoke("addon-fs-delete", { addonId, filePath }),
+  addonFileExists: (addonId, filePath) =>
+    ipcRenderer.invoke("addon-fs-exists", { addonId, filePath }),
+
   // Generic send/invoke for compatibility shims
   send: (channel, ...args) => {
     const allowedChannels = [
@@ -62,7 +74,15 @@ const api = {
     }
   },
   invoke: (channel, ...args) => {
-    const allowedChannels = ["get-addon-states", "get-addon-config"];
+    const allowedChannels = [
+      "get-addon-states",
+      "get-addon-config",
+      "addon-fs-read",
+      "addon-fs-write",
+      "addon-fs-list",
+      "addon-fs-delete",
+      "addon-fs-exists",
+    ];
     if (allowedChannels.includes(channel)) {
       return ipcRenderer.invoke(channel, ...args);
     }

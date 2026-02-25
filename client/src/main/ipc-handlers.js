@@ -233,6 +233,85 @@ function registerIpcHandlers() {
       }
     },
   );
+
+  // --- Addon File System Handlers ---
+
+  function getSafeAddonPath(addonId, filePath = "") {
+    const addonDir = path.join(addonsDir, addonId);
+    const fullPath = path.join(addonDir, filePath);
+    const resolvedPath = path.resolve(fullPath);
+
+    if (!resolvedPath.startsWith(path.resolve(addonDir))) {
+      throw new Error("Access denied: Path is outside of addon directory");
+    }
+    return resolvedPath;
+  }
+
+  ipcMain.handle("addon-fs-read", (event, { addonId, filePath }) => {
+    console.log(`[IPC] addon-fs-read: ${addonId}/${filePath}`);
+    try {
+      const safePath = getSafeAddonPath(addonId, filePath);
+      if (fs.existsSync(safePath)) {
+        return fs.readFileSync(safePath, "utf8");
+      }
+      return null;
+    } catch (e) {
+      console.error(`[Addons FS] Read failed: ${e.message}`);
+      throw e;
+    }
+  });
+
+  ipcMain.handle("addon-fs-write", (event, { addonId, filePath, data }) => {
+    console.log(`[IPC] addon-fs-write: ${addonId}/${filePath}`);
+    try {
+      const safePath = getSafeAddonPath(addonId, filePath);
+      const dir = path.dirname(safePath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(safePath, data, "utf8");
+      return { success: true };
+    } catch (e) {
+      console.error(`[Addons FS] Write failed: ${e.message}`);
+      throw e;
+    }
+  });
+
+  ipcMain.handle("addon-fs-list", (event, { addonId, subDir = "" }) => {
+    console.log(`[IPC] addon-fs-list: ${addonId}/${subDir}`);
+    try {
+      const safePath = getSafeAddonPath(addonId, subDir);
+      if (fs.existsSync(safePath) && fs.lstatSync(safePath).isDirectory()) {
+        return fs.readdirSync(safePath);
+      }
+      return [];
+    } catch (e) {
+      console.error(`[Addons FS] List failed: ${e.message}`);
+      throw e;
+    }
+  });
+
+  ipcMain.handle("addon-fs-delete", (event, { addonId, filePath }) => {
+    console.log(`[IPC] addon-fs-delete: ${addonId}/${filePath}`);
+    try {
+      const safePath = getSafeAddonPath(addonId, filePath);
+      if (fs.existsSync(safePath)) {
+        fs.rmSync(safePath, { recursive: true, force: true });
+        return { success: true };
+      }
+      return { success: false, error: "File not found" };
+    } catch (e) {
+      console.error(`[Addons FS] Delete failed: ${e.message}`);
+      throw e;
+    }
+  });
+
+  ipcMain.handle("addon-fs-exists", (event, { addonId, filePath }) => {
+    try {
+      const safePath = getSafeAddonPath(addonId, filePath);
+      return fs.existsSync(safePath);
+    } catch (e) {
+      return false;
+    }
+  });
 }
 
 module.exports = { registerIpcHandlers };

@@ -12,6 +12,39 @@ class KloakAddonAPI {
     if (window.electronAPI && window.electronAPI.log) {
       window.electronAPI.log("Kloak Addons API: Initializing...");
     }
+
+    this.settings = {
+      get: async (addonId) => {
+        if (window.electronAPI && window.electronAPI.getAddonConfig) {
+          return await window.electronAPI.getAddonConfig(addonId);
+        }
+        return {};
+      },
+      set: (addonId, data) => {
+        if (window.electronAPI && window.electronAPI.saveAddonConfig) {
+          window.electronAPI.saveAddonConfig({ addonId, data });
+        }
+      },
+    };
+
+    this.fs = {
+      read: async (addonId, filePath) => {
+        return await window.electronAPI.readAddonFile(addonId, filePath);
+      },
+      write: async (addonId, filePath, data) => {
+        return await window.electronAPI.writeAddonFile(addonId, filePath, data);
+      },
+      list: async (addonId, subDir = "") => {
+        return await window.electronAPI.listAddonFiles(addonId, subDir);
+      },
+      delete: async (addonId, filePath) => {
+        return await window.electronAPI.deleteAddonFile(addonId, filePath);
+      },
+      exists: async (addonId, filePath) => {
+        return await window.electronAPI.addonFileExists(addonId, filePath);
+      },
+    };
+
     this._setupInterceptor();
   }
 
