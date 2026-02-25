@@ -3,3 +3,6 @@ client/dist/
 PROJECT_SPEC.md
 .agents/
 client/addons/addon-states.json
+client/addons/developer-toolkit/config.json
+client/addons/quick-react/index.json
+client/addons/quick-react/config.json
