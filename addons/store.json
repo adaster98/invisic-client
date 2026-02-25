@@ -32,7 +32,7 @@
   "developer-toolkit": {
     "name": "Developer Toolkit",
     "description": "A powerful multitool for developers. View hidden user info and copy raw database IDs directly from the chat.",
-    "version": "1.0.3",
-    "url": "https://codeberg.org/adaster98/kloak-client-unofficial/raw/branch/main/addons/release/developer-toolkit/developer-toolkit-1.0.3.zip"
+    "version": "1.0.4",
+    "url": "https://codeberg.org/adaster98/kloak-client-unofficial/raw/branch/main/addons/release/developer-toolkit/developer-toolkit-1.0.4.zip"
   }
 }
