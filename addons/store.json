@@ -38,7 +38,7 @@
   "quick-react": {
     "name": "Quick React",
     "description": "Quickly react to messages with your most used emojis.",
-    "version": "1.0.0",
-    "url": "https://codeberg.org/adaster98/kloak-client-unofficial/raw/branch/main/addons/release/quick-react/quick-react-1.0.0.zip"
+    "version": "1.0.1",
+    "url": "https://codeberg.org/adaster98/kloak-client-unofficial/raw/branch/main/addons/release/quick-react/quick-react-1.0.1.zip"
   }
 }

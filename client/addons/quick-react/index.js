@@ -7,6 +7,8 @@
     emojis: {}, // format: "emoji": { date: "YYYY-MM-DD", count: 1 }
   };
 
+  const emojiCache = {}; // Session-level cache for custom emojis
+
   try {
     if (window.electronAPI && window.electronAPI.getAddonConfig) {
       const savedConfig = await window.electronAPI.getAddonConfig(ADDON_ID);
@@ -105,6 +107,15 @@
                 }
               }
             }
+          } else if (url.includes("server_emojis")) {
+            const resData = await clonedResponse.json();
+            if (Array.isArray(resData)) {
+              resData.forEach((item) => {
+                if (item && item.name && item.file_path) {
+                  emojiCache[item.name] = item.file_path;
+                }
+              });
+            }
           } else if (url.includes("rpc/add_reaction")) {
             const resData = await clonedResponse.json();
             const items = Array.isArray(resData) ? resData : [resData];
@@ -158,6 +169,55 @@
     }
   };
 
+  // Helper to resolve custom emoji image URL
+  const updateEmojiButton = async (btn, emojiStr) => {
+    if (!emojiStr.startsWith(":") || !emojiStr.endsWith(":")) return;
+    const emojiName = emojiStr.slice(1, -1);
+
+    // 1. Check in-memory cache
+    if (emojiCache[emojiName]) {
+      const url = `https://foquucurnwpqcvgqukpz.supabase.co/storage/v1/object/public/server-emojis/${emojiCache[emojiName]}`;
+      btn.innerHTML = `<img src="${url}" alt="${emojiStr}" style="width: 20px; height: 20px; vertical-align: middle; object-fit: contain;">`;
+      return;
+    }
+
+    // 2. Check DOM for existing image
+    const imgInDom = document.querySelector(
+      `img[alt="${emojiStr}"], img[alt="${emojiName}"]`,
+    );
+    if (imgInDom && imgInDom.src && imgInDom.src.includes("/server-emojis/")) {
+      const path = imgInDom.src.split("/server-emojis/")[1];
+      emojiCache[emojiName] = path;
+      const url = imgInDom.src;
+      btn.innerHTML = `<img src="${url}" alt="${emojiStr}" style="width: 20px; height: 20px; vertical-align: middle; object-fit: contain;">`;
+      return;
+    }
+
+    // 3. Ask Database
+    const api = window.KloakAddonAPI;
+    if (api && api.apiKey) {
+      try {
+        const res = await originalFetch(
+          `https://foquucurnwpqcvgqukpz.supabase.co/rest/v1/server_emojis?select=name%2Cfile_path&name=eq.${emojiName}`,
+          {
+            headers: {
+              apiKey: api.apiKey,
+              Authorization: api.authToken,
+            },
+          },
+        );
+        const data = await res.json();
+        if (data && data[0] && data[0].file_path) {
+          emojiCache[emojiName] = data[0].file_path;
+          const url = `https://foquucurnwpqcvgqukpz.supabase.co/storage/v1/object/public/server-emojis/${data[0].file_path}`;
+          btn.innerHTML = `<img src="${url}" alt="${emojiStr}" style="width: 20px; height: 20px; vertical-align: middle; object-fit: contain;">`;
+        }
+      } catch (e) {
+        // Silently fail, stays as text
+      }
+    }
+  };
+
   // UI Injection
   let hoverHandler = null;
 
@@ -206,9 +266,8 @@
           btn.type = "button";
 
           if (emojiStr.startsWith(":") && emojiStr.endsWith(":")) {
-            // For now we'll display the custom emoji name.
-            // If we find the URL format later, we can replace this with an <img> tag.
             btn.innerHTML = `<span style="font-size: 11px; font-weight: 600;">${emojiStr}</span>`;
+            updateEmojiButton(btn, emojiStr);
           } else {
             btn.textContent = emojiStr;
           }
