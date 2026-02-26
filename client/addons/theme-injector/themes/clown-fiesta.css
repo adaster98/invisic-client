@@ -66,6 +66,9 @@
 .bg-layout-chat, .bg-background {
     background-color: hsl(240, 100%, 12%) !important;
 }
+.bg-layout-sidebar-secondary {
+    background-color: hsl(0, 100%, 15%) !important;
+}
 
 .bg-background\/20,
 .bg-muted\/60,
