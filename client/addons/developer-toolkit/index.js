@@ -301,6 +301,14 @@
     }
   };
 
+  const handleGlobalClick = (e) => {
+    // Clear last right clicked ID if we left click anything
+    // This prevents the context menu items from leaking into other Radix menus (like server menus)
+    if (e.button !== 2) {
+      lastRightClickedMessageId = null;
+    }
+  };
+
   const createContextMenuItem = (text, iconSvg, onClickAction) => {
     const item = document.createElement("div");
     item.className =
@@ -356,6 +364,7 @@
         domObserver.observe(document.body, { childList: true, subtree: true });
 
         document.addEventListener("contextmenu", handleContextMenu, true);
+        document.addEventListener("pointerdown", handleGlobalClick, true);
 
         rightClickObserver = new MutationObserver((mutations) => {
           for (const mut of mutations) {
@@ -370,14 +379,14 @@
                   (node.hasAttribute("data-radix-menu-content") ? node : null);
 
                 if (menu && !menu.querySelector(".kloak-custom-context-btn")) {
-                  const targetUserId = msgToUserMap.get(
-                    lastRightClickedMessageId,
-                  );
+                  // Capture the ID in a local variable for the closures
+                  const currentMsgId = lastRightClickedMessageId;
+                  const targetUserId = msgToUserMap.get(currentMsgId);
 
                   const msgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-hash w-4 h-4 mr-2"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/></svg>`;
                   menu.appendChild(
                     createContextMenuItem("Copy Message ID", msgIcon, () =>
-                      navigator.clipboard.writeText(lastRightClickedMessageId),
+                      navigator.clipboard.writeText(currentMsgId),
                     ),
                   );
 
@@ -397,7 +406,7 @@
                       devIcon,
                       async () => {
                         if (!targetUserId) {
-                          showDeveloperModal(lastRightClickedMessageId, {
+                          showDeveloperModal(currentMsgId, {
                             bio: "Error: Could not identify target User ID from network cache.",
                           });
                           return;
@@ -405,7 +414,7 @@
 
                         if (userProfileCache.has(targetUserId)) {
                           showDeveloperModal(
-                            lastRightClickedMessageId,
+                            currentMsgId,
                             userProfileCache.get(targetUserId),
                           );
                           return;
@@ -419,7 +428,7 @@
                           !api.authToken ||
                           !api.xHash
                         ) {
-                          showDeveloperModal(lastRightClickedMessageId, {
+                          showDeveloperModal(currentMsgId, {
                             id: targetUserId,
                             bio: `RPC Failed: Missing credentials.\nAPI Ready: ${!!api}\nHas User ID: ${!!api?.userID}\nHas API Key: ${!!api?.apiKey}`,
                           });
@@ -451,23 +460,23 @@
 
                           if (profile && profile.id) {
                             userProfileCache.set(targetUserId, profile);
-                            showDeveloperModal(
-                              lastRightClickedMessageId,
-                              profile,
-                            );
+                            showDeveloperModal(currentMsgId, profile);
                             return;
                           }
                         } catch (e) {
                           console.error(`[${ADDON_ID}] RPC Fetch error:`, e);
                         }
 
-                        showDeveloperModal(lastRightClickedMessageId, {
+                        showDeveloperModal(currentMsgId, {
                           id: targetUserId,
                           bio: "User data not found in cache and RPC fetch failed.",
                         });
                       },
                     ),
                   );
+                  // Clear the ID immediately after successfully populating a menu
+                  // This prevents the same ID from being used for accidental subsequent menu opens
+                  lastRightClickedMessageId = null;
                 }
               }
             }
@@ -484,6 +493,7 @@
         if (domObserver) domObserver.disconnect();
         if (rightClickObserver) rightClickObserver.disconnect();
         document.removeEventListener("contextmenu", handleContextMenu, true);
+        document.removeEventListener("pointerdown", handleGlobalClick, true);
 
         document
           .querySelectorAll(".kloak-injected-msg-id, .kloak-injected-user-id")
