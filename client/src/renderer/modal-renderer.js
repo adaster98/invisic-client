@@ -32,12 +32,13 @@ if (window.electronAPI) {
   // Destructive Action Hijacker
 
   const handleDestructiveIntercept = (e) => {
-    // Find the Leave Server button
-    let target = e.target.closest(".text-destructive");
-    if (!target) {
-      const potential = e.target.closest('div[role="menuitem"]');
-      if (potential && /Leave|Quit|Exit/i.test(potential.textContent || ""))
-        target = potential;
+    let target =
+      e.target.closest(".text-destructive") ||
+      e.target.closest('div[role="menuitem"]');
+
+    // Verify it's actually a "Leave", "Quit", or "Exit" action
+    if (target && !/Leave|Quit|Exit/i.test(target.textContent || "")) {
+      target = null;
     }
 
     // If it's not the button, or currently not doing a synthetic click playback, let it pass
