@@ -24,3 +24,4 @@ client/test-cache/Xenova/nllb-200-distilled-600M/tokenizer_config.json
 client/test-cache/Xenova/nllb-200-distilled-600M/tokenizer.json
 client/test-cache/Xenova/nllb-200-distilled-600M/onnx/decoder_model_merged_quantized.onnx
 client/test-cache/Xenova/nllb-200-distilled-600M/onnx/encoder_model_quantized.onnx
+CLAUDE.md
