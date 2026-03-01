@@ -21,6 +21,11 @@
     --kloak-radiobtn-border: #2B2B2B;
 }
 
+/* Maximized window — square corners */
+html.kloak-maximized,
+body.kloak-maximized { border-radius: 0 !important; }
+body.kloak-maximized #kloak-addon-settings-modal { border-radius: 0; }
+
 /* Global UI Components */
 #kloak-addon-pane {
     display: none;

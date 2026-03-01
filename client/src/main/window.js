@@ -267,6 +267,22 @@ function createWindow() {
     },
   );
 
+  mainWindow.on("maximize", () => {
+    mainWindow.webContents
+      .executeJavaScript(
+        'document.documentElement.classList.add("kloak-maximized"); document.body.classList.add("kloak-maximized");',
+      )
+      .catch(() => {});
+  });
+
+  mainWindow.on("unmaximize", () => {
+    mainWindow.webContents
+      .executeJavaScript(
+        'document.documentElement.classList.remove("kloak-maximized"); document.body.classList.remove("kloak-maximized");',
+      )
+      .catch(() => {});
+  });
+
   mainWindow.on("close", (event) => {
     if (!app.isQuiting) {
       event.preventDefault();
