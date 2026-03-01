@@ -339,7 +339,15 @@ function registerIpcHandlers() {
     const backendPath = path.join(addonsDir, folder, "backend.js");
     if (fs.existsSync(backendPath)) {
       try {
-        require(backendPath).registerBackend();
+        const backendModule = require(backendPath);
+        if (typeof backendModule.registerBackend === "function") {
+          backendModule.registerBackend();
+        } else {
+          console.error(
+            `[IPC] Backend for ${folder} does not export registerBackend().` +
+              ` The addon may need to be updated.`,
+          );
+        }
       } catch (err) {
         console.error(`[IPC] Failed to load backend for ${folder}:`, err);
       }
