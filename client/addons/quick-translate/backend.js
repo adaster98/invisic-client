@@ -1,20 +1,19 @@
 /**
  * Quick Translate - Backend (Main Process)
  *
- * Manages a forked child process that runs the AI translation model.
- * If the child crashes (SIGTRAP, OOM, etc.), it reports a clean error
- * to the UI without taking down the Electron process.
+ * Manages a hidden BrowserWindow that runs the AI translation model
+ * via @xenova/transformers loaded from CDN. The browser context uses
+ * onnxruntime-web (WASM/WebGPU) natively, with models cached in the
+ * browser's Cache API for offline use after first download.
  */
-const { session, ipcMain, app } = require("electron");
-const { fork } = require("child_process");
+const { session, ipcMain, app, BrowserWindow } = require("electron");
 const path = require("path");
-const fs = require("fs");
-const os = require("os");
 
-let worker = null;
+let translatorWindow = null;
 let workerReady = false;
 let translateCallbacks = new Map();
 let callIdCounter = 0;
+let workerMessageHandler = null;
 
 function getMainWindow() {
   try {
@@ -40,13 +39,17 @@ function sendToRenderer(channel, data) {
   }
 }
 
-function killWorker() {
-  if (worker) {
-    try {
-      worker.kill();
-    } catch (e) {}
-    worker = null;
+function destroyTranslatorWindow() {
+  // Remove the IPC listener for this window
+  if (workerMessageHandler) {
+    ipcMain.removeListener("qt-worker-message", workerMessageHandler);
+    workerMessageHandler = null;
   }
+
+  if (translatorWindow && !translatorWindow.isDestroyed()) {
+    translatorWindow.close();
+  }
+  translatorWindow = null;
   workerReady = false;
 
   for (const [id, cb] of translateCallbacks) {
@@ -55,208 +58,195 @@ function killWorker() {
   translateCallbacks.clear();
 }
 
-function spawnWorker() {
-  const workerPath = path.join(__dirname, "translator-worker.js");
-  console.log("[Quick Translate] Spawning isolated worker:", workerPath);
+function handleWorkerMessage(msg) {
+  switch (msg.type) {
+    case "alive":
+      console.log("[Quick Translate] Translator window is alive.");
+      break;
 
-  // Resolve the app root — use the unpacked path for forked processes
-  let appRoot = app.getAppPath();
-  if (appRoot.includes(".asar")) {
-    const unpackedRoot = appRoot.replace(".asar", ".asar.unpacked");
-    if (fs.existsSync(unpackedRoot)) {
-      appRoot = unpackedRoot;
+    case "log":
+      console.log(`[QT Worker] ${msg.text}`);
+      break;
+
+    case "progress":
+      sendToRenderer("qt-status", {
+        status: "downloading",
+        percent: msg.percent,
+        file: msg.file,
+      });
+      break;
+
+    case "ready":
+      console.log("[Quick Translate] Model loaded and ready.");
+      workerReady = true;
+      sendToRenderer("qt-status", { status: "ready" });
+      break;
+
+    case "error":
+      console.error("[Quick Translate] Worker error:", msg.error);
+      workerReady = false;
+      sendToRenderer("qt-status", {
+        status: "error",
+        message: msg.error,
+      });
+      break;
+
+    case "result": {
+      const cb = translateCallbacks.get(msg.id);
+      if (cb) {
+        translateCallbacks.delete(msg.id);
+        if (msg.error) {
+          cb.reject(new Error(msg.error));
+        } else {
+          cb.resolve(msg.text);
+        }
+      }
+      break;
     }
   }
+}
 
-  worker = fork(workerPath, [], {
-    cwd: appRoot,
-    stdio: ["pipe", "pipe", "pipe", "ipc"],
-    env: {
-      ...process.env,
-      KLOAK_APP_ROOT: app.getAppPath(),
-      NODE_PATH: path.join(appRoot, "node_modules"),
+function createTranslatorWindow() {
+  translatorWindow = new BrowserWindow({
+    show: false,
+    width: 400,
+    height: 300,
+    webPreferences: {
+      preload: path.join(__dirname, "translator-preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      partition: "persist:translator",
+      // Allows the file:// page to import ES modules from CDN.
+      // Safe here: this is a non-user-facing, fully controlled hidden window.
+      webSecurity: false,
     },
   });
 
-  worker.stdout.on("data", (data) => {
-    console.log(`[QT Worker stdout] ${data.toString().trim()}`);
-  });
-  worker.stderr.on("data", (data) => {
-    const text = data.toString().trim();
-    if (!text.includes("CleanUnusedInitializersAndNodeArgs")) {
-      console.error(`[QT Worker stderr] ${text}`);
+  // Listen for messages from the hidden window
+  workerMessageHandler = (event, msg) => {
+    if (
+      translatorWindow &&
+      !translatorWindow.isDestroyed() &&
+      event.sender === translatorWindow.webContents
+    ) {
+      handleWorkerMessage(msg);
     }
-  });
+  };
+  ipcMain.on("qt-worker-message", workerMessageHandler);
 
-  worker.on("message", (msg) => {
-    switch (msg.type) {
-      case "alive":
-        console.log("[Quick Translate] Worker process is alive.");
-        break;
-
-      case "log":
-        console.log(`[QT Worker] ${msg.text}`);
-        break;
-
-      case "progress":
-        sendToRenderer("qt-status", {
-          status: "downloading",
-          percent: msg.percent,
-          file: msg.file,
-        });
-        break;
-
-      case "ready":
-        console.log("[Quick Translate] Worker: Model loaded and ready.");
-        workerReady = true;
-        sendToRenderer("qt-status", { status: "ready" });
-        break;
-
-      case "error":
-        console.error("[Quick Translate] Worker error:", msg.error);
-        workerReady = false;
-        sendToRenderer("qt-status", {
-          status: "error",
-          message: msg.error,
-        });
-        break;
-
-      case "result": {
-        const cb = translateCallbacks.get(msg.id);
-        if (cb) {
-          translateCallbacks.delete(msg.id);
-          if (msg.error) {
-            cb.reject(new Error(msg.error));
-          } else {
-            cb.resolve(msg.text);
-          }
-        }
-        break;
-      }
-    }
-  });
-
-  worker.on("exit", (code, signal) => {
+  // Handle renderer process crashes
+  translatorWindow.webContents.on("render-process-gone", (_event, details) => {
     console.error(
-      `[Quick Translate] Worker exited: code=${code}, signal=${signal}`,
+      "[Quick Translate] Translator window crashed:",
+      details.reason,
     );
     workerReady = false;
-    worker = null;
+    translatorWindow = null;
+
+    if (workerMessageHandler) {
+      ipcMain.removeListener("qt-worker-message", workerMessageHandler);
+      workerMessageHandler = null;
+    }
 
     for (const [id, cb] of translateCallbacks) {
-      cb.reject(new Error("Worker process exited unexpectedly"));
+      cb.reject(new Error("Translator process crashed"));
     }
     translateCallbacks.clear();
 
-    const reason =
-      signal === "SIGTRAP"
-        ? "Native ONNX runtime crashed (SIGTRAP). Try restarting the app."
-        : `Worker process died (code: ${code}, signal: ${signal})`;
-
-    sendToRenderer("qt-status", { status: "error", message: reason });
-  });
-
-  worker.on("error", (err) => {
-    console.error("[Quick Translate] Worker spawn error:", err);
-    workerReady = false;
-    worker = null;
     sendToRenderer("qt-status", {
       status: "error",
-      message: `Failed to spawn worker: ${err.message}`,
+      message: `Translator crashed: ${details.reason}. Try re-initializing.`,
     });
   });
+
+  translatorWindow.on("closed", () => {
+    translatorWindow = null;
+  });
+
+  translatorWindow.loadFile(path.join(__dirname, "translator.html"));
+}
+
+function sendToWorker(data) {
+  if (translatorWindow && !translatorWindow.isDestroyed()) {
+    translatorWindow.webContents.send("qt-worker-command", data);
+  }
 }
 
 function registerBackend() {
   const appSession = session.fromPartition("persist:kloak");
-  console.log("[Quick Translate] Registering Backend (Child Process Mode)...");
+  console.log(
+    "[Quick Translate] Registering Backend (Hidden BrowserWindow Mode)...",
+  );
 
   // IPC: Initialize
   ipcMain.handle("init-translator", async () => {
     console.log("[Quick Translate] Init requested by renderer.");
-    killWorker();
-    spawnWorker();
+    destroyTranslatorWindow();
+    createTranslatorWindow();
 
-    const currentWorker = worker;
-    if (!currentWorker) {
-      return { success: false, error: "Worker failed to spawn" };
+    if (!translatorWindow) {
+      return { success: false, error: "Translator window failed to create" };
     }
 
     return new Promise((resolve) => {
       const timeout = setTimeout(() => {
-        if (currentWorker) {
-          currentWorker.removeListener("message", onMessage);
-        }
-        resolve({ success: false, error: "Worker failed to start within 10s" });
-      }, 10000);
+        resolve({
+          success: false,
+          error: "Translator failed to start within 15s",
+        });
+      }, 15000);
 
-      const onMessage = (msg) => {
-        if (msg.type === "alive") {
-          currentWorker.removeListener("message", onMessage);
+      const onMessage = (_event, msg) => {
+        if (
+          translatorWindow &&
+          !translatorWindow.isDestroyed() &&
+          _event.sender === translatorWindow.webContents &&
+          msg.type === "alive"
+        ) {
+          ipcMain.removeListener("qt-worker-message", onMessage);
           clearTimeout(timeout);
-          currentWorker.send({ type: "init" });
+          sendToWorker({ type: "init" });
           resolve({ success: true, pending: true });
         }
       };
 
-      currentWorker.on("message", onMessage);
+      ipcMain.on("qt-worker-message", onMessage);
     });
   });
 
-  // IPC: Unload (kill worker, keep cache)
+  // IPC: Unload (close window, keep cache)
   ipcMain.handle("unload-translator", async () => {
     console.log("[Quick Translate] Unload requested.");
-    killWorker();
+    destroyTranslatorWindow();
     sendToRenderer("qt-status", { status: "unloaded" });
     return { success: true };
   });
 
-  // IPC: Delete cache (kill worker + wipe cached model)
+  // IPC: Delete cache (close window + wipe cached models from browser storage)
   ipcMain.handle("delete-translator-cache", async () => {
     console.log("[Quick Translate] Delete cache requested.");
-    killWorker();
+    destroyTranslatorWindow();
 
-    const possibleCacheDirs = [
-      path.join(
-        os.homedir(),
-        ".cache",
-        "huggingface",
-        "hub",
-        "models--Xenova--nllb-200-distilled-600M",
-      ),
-      path.join(
-        os.homedir(),
-        ".cache",
-        "huggingface",
-        "transformers",
-        "Xenova",
-        "nllb-200-distilled-600M",
-      ),
-    ];
-
-    let deleted = false;
-    for (const dir of possibleCacheDirs) {
-      if (fs.existsSync(dir)) {
-        try {
-          fs.rmSync(dir, { recursive: true, force: true });
-          console.log(`[Quick Translate] Deleted cache: ${dir}`);
-          deleted = true;
-        } catch (e) {
-          console.error(
-            `[Quick Translate] Failed to delete ${dir}:`,
-            e.message,
-          );
-        }
-      }
+    try {
+      const translatorSession = session.fromPartition("persist:translator");
+      await translatorSession.clearStorageData({
+        storages: ["cachestorage", "indexdb", "localstorage"],
+      });
+      console.log("[Quick Translate] Cleared translator browser storage.");
+    } catch (e) {
+      console.error(
+        "[Quick Translate] Failed to clear storage:",
+        e.message,
+      );
     }
 
     sendToRenderer("qt-status", { status: "unloaded" });
-    return { success: true, deleted };
+    return { success: true };
   });
 
   // IPC: Translate
-  ipcMain.handle("translate-text", async (event, { text, src, tgt }) => {
-    if (!worker || !workerReady) {
+  ipcMain.handle("translate-text", async (_event, { text, src, tgt }) => {
+    if (!translatorWindow || translatorWindow.isDestroyed() || !workerReady) {
       return { success: false, error: "Translator not ready" };
     }
 
@@ -279,11 +269,11 @@ function registerBackend() {
         },
       });
 
-      worker.send({ type: "translate", id, text, src, tgt });
+      sendToWorker({ type: "translate", id, text, src, tgt });
     });
   });
 
-  // CSP bypass for HuggingFace model downloads
+  // CSP bypass for HuggingFace model downloads (main window session)
   appSession.webRequest.onHeadersReceived((details, callback) => {
     const responseHeaders = Object.assign({}, details.responseHeaders);
     const cspKey = Object.keys(responseHeaders).find(

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Quick Translate Worker</title>
+</head>
+<body>
+<script type="module">
+  let translatorPipeline = null;
+
+  // Signal that the window is alive and ready to receive commands
+  window.bridge.send({ type: "alive" });
+
+  window.bridge.onMessage(async (msg) => {
+    try {
+      if (msg.type === "init") {
+        await handleInit();
+      } else if (msg.type === "translate") {
+        await handleTranslate(msg);
+      }
+    } catch (err) {
+      window.bridge.send({ type: "error", error: err.message });
+    }
+  });
+
+  async function handleInit() {
+    window.bridge.send({ type: "log", text: "Loading @xenova/transformers from CDN..." });
+
+    let pipeline, env;
+    try {
+      const module = await import("https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2");
+      pipeline = module.pipeline;
+      env = module.env;
+    } catch (err) {
+      window.bridge.send({
+        type: "error",
+        error: "Failed to load AI library. Check your internet connection and try again.",
+      });
+      return;
+    }
+
+    env.allowLocalModels = false;
+    env.allowRemoteModels = true;
+
+    window.bridge.send({ type: "log", text: "Starting model pipeline (WASM backend)..." });
+
+    translatorPipeline = await pipeline(
+      "translation",
+      "Xenova/nllb-200-distilled-600M",
+      {
+        progress_callback: (x) => {
+          if (x.status === "progress") {
+            window.bridge.send({
+              type: "progress",
+              percent: Math.round(x.progress),
+              file: x.file,
+            });
+          } else if (x.status === "done") {
+            window.bridge.send({ type: "log", text: `Loaded ${x.file}` });
+          }
+        },
+        quantized: true,
+      },
+    );
+
+    window.bridge.send({ type: "ready" });
+  }
+
+  async function handleTranslate(msg) {
+    if (!translatorPipeline) {
+      window.bridge.send({ type: "result", id: msg.id, error: "Pipeline not initialized" });
+      return;
+    }
+
+    const output = await translatorPipeline(msg.text, {
+      src_lang: msg.src || "eng_Latn",
+      tgt_lang: msg.tgt,
+    });
+
+    window.bridge.send({
+      type: "result",
+      id: msg.id,
+      text: output[0].translation_text,
+    });
+  }
+</script>
+</body>
+</html>

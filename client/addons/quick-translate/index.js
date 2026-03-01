@@ -5,27 +5,99 @@
   const ICON_TRANSLATE = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-languages w-4 h-4"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>`;
   const ICON_TRANSLATE_SM = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;opacity:0.5;margin-left:4px;"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>`;
 
+  // FLORES-200 / NLLB-200 language codes — major languages only, no regional dialects
   const LANGUAGES = [
-    { code: "eng_Latn", name: "English" },
-    { code: "spa_Latn", name: "Spanish" },
-    { code: "fra_Latn", name: "French" },
-    { code: "deu_Latn", name: "German" },
-    { code: "rus_Cyrl", name: "Russian" },
-    { code: "jpn_Jpan", name: "Japanese" },
+    { code: "afr_Latn", name: "Afrikaans" },
+    { code: "als_Latn", name: "Albanian" },
+    { code: "amh_Ethi", name: "Amharic" },
+    { code: "arb_Arab", name: "Arabic" },
+    { code: "hye_Armn", name: "Armenian" },
+    { code: "asm_Beng", name: "Assamese" },
+    { code: "ast_Latn", name: "Asturian" },
+    { code: "azj_Latn", name: "Azerbaijani" },
+    { code: "eus_Latn", name: "Basque" },
+    { code: "bel_Cyrl", name: "Belarusian" },
+    { code: "ben_Beng", name: "Bengali" },
+    { code: "bos_Latn", name: "Bosnian" },
+    { code: "bul_Cyrl", name: "Bulgarian" },
+    { code: "mya_Mymr", name: "Burmese" },
+    { code: "cat_Latn", name: "Catalan" },
+    { code: "ceb_Latn", name: "Cebuano" },
     { code: "zho_Hans", name: "Chinese (Simplified)" },
-    { code: "ara_Arab", name: "Arabic" },
-    { code: "por_Latn", name: "Portuguese" },
-    { code: "ita_Latn", name: "Italian" },
-    { code: "kor_Hang", name: "Korean" },
-    { code: "hin_Deva", name: "Hindi" },
-    { code: "tur_Latn", name: "Turkish" },
-    { code: "vie_Latn", name: "Vietnamese" },
-    { code: "pol_Latn", name: "Polish" },
+    { code: "zho_Hant", name: "Chinese (Traditional)" },
+    { code: "hrv_Latn", name: "Croatian" },
+    { code: "ces_Latn", name: "Czech" },
+    { code: "dan_Latn", name: "Danish" },
     { code: "nld_Latn", name: "Dutch" },
-    { code: "ukr_Cyrl", name: "Ukrainian" },
-    { code: "tha_Thai", name: "Thai" },
+    { code: "eng_Latn", name: "English" },
+    { code: "est_Latn", name: "Estonian" },
+    { code: "fin_Latn", name: "Finnish" },
+    { code: "fra_Latn", name: "French" },
+    { code: "glg_Latn", name: "Galician" },
+    { code: "kat_Geor", name: "Georgian" },
+    { code: "deu_Latn", name: "German" },
+    { code: "ell_Grek", name: "Greek" },
+    { code: "guj_Gujr", name: "Gujarati" },
+    { code: "hat_Latn", name: "Haitian Creole" },
+    { code: "hau_Latn", name: "Hausa" },
+    { code: "heb_Hebr", name: "Hebrew" },
+    { code: "hin_Deva", name: "Hindi" },
+    { code: "hun_Latn", name: "Hungarian" },
+    { code: "isl_Latn", name: "Icelandic" },
+    { code: "ibo_Latn", name: "Igbo" },
     { code: "ind_Latn", name: "Indonesian" },
+    { code: "gle_Latn", name: "Irish" },
+    { code: "ita_Latn", name: "Italian" },
+    { code: "jpn_Jpan", name: "Japanese" },
+    { code: "jav_Latn", name: "Javanese" },
+    { code: "kan_Knda", name: "Kannada" },
+    { code: "kaz_Cyrl", name: "Kazakh" },
+    { code: "khm_Khmr", name: "Khmer" },
+    { code: "kor_Hang", name: "Korean" },
+    { code: "kir_Cyrl", name: "Kyrgyz" },
+    { code: "lao_Laoo", name: "Lao" },
+    { code: "lvs_Latn", name: "Latvian" },
+    { code: "lit_Latn", name: "Lithuanian" },
+    { code: "ltz_Latn", name: "Luxembourgish" },
+    { code: "mkd_Cyrl", name: "Macedonian" },
+    { code: "zsm_Latn", name: "Malay" },
+    { code: "mal_Mlym", name: "Malayalam" },
+    { code: "mlt_Latn", name: "Maltese" },
+    { code: "mri_Latn", name: "Maori" },
+    { code: "mar_Deva", name: "Marathi" },
+    { code: "khk_Cyrl", name: "Mongolian" },
+    { code: "npi_Deva", name: "Nepali" },
+    { code: "nob_Latn", name: "Norwegian" },
+    { code: "ory_Orya", name: "Odia" },
+    { code: "pan_Guru", name: "Punjabi" },
+    { code: "pes_Arab", name: "Persian" },
+    { code: "pol_Latn", name: "Polish" },
+    { code: "por_Latn", name: "Portuguese" },
+    { code: "ron_Latn", name: "Romanian" },
+    { code: "rus_Cyrl", name: "Russian" },
+    { code: "srp_Cyrl", name: "Serbian" },
+    { code: "sin_Sinh", name: "Sinhala" },
+    { code: "slk_Latn", name: "Slovak" },
+    { code: "slv_Latn", name: "Slovenian" },
+    { code: "som_Latn", name: "Somali" },
+    { code: "spa_Latn", name: "Spanish" },
+    { code: "sun_Latn", name: "Sundanese" },
+    { code: "swh_Latn", name: "Swahili" },
     { code: "swe_Latn", name: "Swedish" },
+    { code: "tgl_Latn", name: "Tagalog" },
+    { code: "tgk_Cyrl", name: "Tajik" },
+    { code: "tam_Taml", name: "Tamil" },
+    { code: "tat_Cyrl", name: "Tatar" },
+    { code: "tel_Telu", name: "Telugu" },
+    { code: "tha_Thai", name: "Thai" },
+    { code: "tur_Latn", name: "Turkish" },
+    { code: "ukr_Cyrl", name: "Ukrainian" },
+    { code: "urd_Arab", name: "Urdu" },
+    { code: "uzn_Latn", name: "Uzbek" },
+    { code: "vie_Latn", name: "Vietnamese" },
+    { code: "cym_Latn", name: "Welsh" },
+    { code: "yor_Latn", name: "Yoruba" },
+    { code: "zul_Latn", name: "Zulu" },
   ];
 
   class QuickTranslateAddon {
@@ -36,10 +108,10 @@
 
       this.config = {
         targetLanguage: "eng_Latn",
-        translateMode: "selected", // "all" | "selected"
+        translateMode: "selected",
       };
 
-      this._translator = null; // null | 'initializing' | 'ready'
+      this._translator = null;
       this._progress = { status: "idle", percent: 0, file: "" };
 
       this._queue = [];
@@ -51,84 +123,84 @@
       this._listenForBackendEvents();
     }
 
-    // CSS
     _injectCSS() {
       if (document.getElementById("qt-addon-styles")) return;
       const style = document.createElement("style");
       style.id = "qt-addon-styles";
       style.textContent = `
-        /* ---- Settings ---- */
-        .qt-settings { display: flex; flex-direction: column; gap: 20px; padding: 4px 0; }
+        .qt-settings { display: flex; flex-direction: column; gap: 16px; padding: 4px 0; }
 
         .qt-card {
-          background: var(--kloak-bg-secondary, #161616);
-          border: 1px solid var(--kloak-border, #2a2a2a);
+          background: var(--kloak-bg-box);
+          border: 1px solid var(--kloak-bg-btn);
           border-radius: 12px; padding: 16px;
         }
 
-        .qt-row { display: flex; align-items: center; gap: 12px; }
-        .qt-row-sb { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .qt-row { display: flex; align-items: center; gap: 14px; }
 
         .qt-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-        .qt-dot-off { background: var(--kloak-accent-destructive, #eb1414); box-shadow: 0 0 8px rgba(235,20,20,0.4); }
-        .qt-dot-on  { background: var(--kloak-accent-success, #40bf80); box-shadow: 0 0 8px rgba(64,191,128,0.4); }
-        .qt-dot-load { background: var(--kloak-accent-warning, #f59e0b); box-shadow: 0 0 8px rgba(245,158,11,0.4); }
+        .qt-dot-off { background: var(--kloak-accent-destructive); box-shadow: 0 0 8px rgba(235,20,20,0.4); }
+        .qt-dot-on  { background: var(--kloak-accent-success); box-shadow: 0 0 8px rgba(64,191,128,0.4); }
+        .qt-dot-load { background: var(--kloak-accent-warning); box-shadow: 0 0 8px rgba(245,158,11,0.4); }
 
-        .qt-title { margin: 0; font-size: 14px; font-weight: 600; color: var(--kloak-text-main, #fff); }
-        .qt-sub { margin: 0; font-size: 12px; color: var(--kloak-text-sub, #888); line-height: 1.4; }
-        .qt-label { font-size: 11px; font-weight: 700; color: var(--kloak-text-sub, #888); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; display: block; }
-
-        .qt-select {
-          width: 100%; background: var(--kloak-bg-tertiary, #1a1a1a);
-          border: 1px solid var(--kloak-border, #333); color: var(--kloak-text-main, #fff);
-          padding: 10px 14px; border-radius: 10px; font-size: 13px;
-          appearance: none; cursor: pointer;
+        .qt-actions { display: flex; gap: 8px; }
+        .qt-actions button { flex: 1; }
+        .qt-actions .qt-btn-danger {
+          flex: 0 0 auto;
+          background: rgba(235,20,20,0.08); color: var(--kloak-accent-destructive);
+          border-color: rgba(235,20,20,0.2);
         }
-        .qt-select:hover { border-color: #444; }
-
-        .qt-progress { margin-top: 10px; width: 100%; height: 4px; background: #222; border-radius: 2px; overflow: hidden; }
-        .qt-progress-bar { height: 100%; background: var(--kloak-accent-warning, #f59e0b); transition: width 0.3s ease; }
-        .qt-progress-label { margin-top: 4px; font-size: 11px; color: var(--kloak-text-sub, #666); }
+        .qt-actions .qt-btn-danger:hover { background: rgba(235,20,20,0.15); }
 
         .qt-error-box {
           margin-top: 10px; padding: 10px; border-radius: 8px;
           background: rgba(235,20,20,0.08); border: 1px solid rgba(235,20,20,0.2);
-          color: var(--kloak-accent-destructive, #eb1414); font-size: 12px; line-height: 1.4;
+          color: var(--kloak-accent-destructive); font-size: 12px; line-height: 1.4;
         }
 
-        .qt-btn {
-          padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: 600;
-          border: 1px solid var(--kloak-border, #333); cursor: pointer; transition: all 0.15s;
-          display: inline-flex; align-items: center; gap: 6px;
+        .qt-mode-row {
+          display: flex; align-items: center; gap: 12px;
+          padding: 10px 0; cursor: pointer;
         }
-        .qt-btn-primary { background: var(--kloak-bg-tertiary, #1a1a1a); color: var(--kloak-text-main, #fff); }
-        .qt-btn-primary:hover { background: #222; border-color: #444; }
-        .qt-btn-danger { background: rgba(235,20,20,0.1); color: var(--kloak-accent-destructive, #eb1414); border-color: rgba(235,20,20,0.25); }
-        .qt-btn-danger:hover { background: rgba(235,20,20,0.2); }
-        .qt-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-        .qt-btn-full { width: 100%; justify-content: center; }
+        .qt-mode-row label { cursor: pointer; }
+        .qt-mode-label { font-size: 13px; font-weight: 500; color: var(--kloak-text-main); }
+        .qt-mode-desc { font-size: 12px; color: var(--kloak-text-sub); margin-top: 2px; }
 
-        .qt-radio-group { display: flex; gap: 8px; }
-        .qt-radio {
-          flex: 1; padding: 10px 14px; border-radius: 10px; text-align: center;
-          font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s;
-          border: 1px solid var(--kloak-border, #333);
-          background: var(--kloak-bg-tertiary, #1a1a1a);
-          color: var(--kloak-text-sub, #888);
+        /* Searchable dropdown */
+        .qt-dropdown { position: relative; }
+        .qt-dropdown-input {
+          width: 100%; box-sizing: border-box;
+          background: var(--kloak-bg-box); border: 1px solid var(--kloak-bg-btn);
+          color: var(--kloak-text-main); padding: 10px 14px; border-radius: 8px;
+          font-size: 13px; font-family: inherit; outline: none;
+          transition: border-color 0.2s;
         }
-        .qt-radio:hover { border-color: #444; }
-        .qt-radio.active {
-          border-color: var(--kloak-accent-success, #40bf80);
-          color: var(--kloak-text-main, #fff);
-          background: rgba(64,191,128,0.08);
+        .qt-dropdown-input:focus { border-color: var(--kloak-icon-fg); }
+        .qt-dropdown-input::placeholder { color: var(--kloak-text-sub); }
+        .qt-dropdown-list {
+          display: none; position: absolute; top: 100%; left: 0; right: 0;
+          margin-top: 4px; max-height: 200px; overflow-y: auto;
+          background: var(--kloak-bg-box); border: 1px solid var(--kloak-bg-btn);
+          border-radius: 8px; z-index: 100;
         }
+        .qt-dropdown-list.open { display: block; }
+        .qt-dropdown-item {
+          padding: 8px 14px; font-size: 13px; color: var(--kloak-text-sub);
+          cursor: pointer; transition: background 0.1s, color 0.1s;
+        }
+        .qt-dropdown-item:hover { background: var(--kloak-bg-btn); color: var(--kloak-text-main); }
+        .qt-dropdown-item.selected { color: var(--kloak-text-main); font-weight: 600; }
+        .qt-dropdown-empty {
+          padding: 12px 14px; font-size: 12px; color: var(--kloak-text-sub); text-align: center;
+        }
+        .qt-dropdown-list::-webkit-scrollbar { width: 4px; }
+        .qt-dropdown-list::-webkit-scrollbar-track { background: transparent; }
+        .qt-dropdown-list::-webkit-scrollbar-thumb { background: var(--kloak-bg-btn); border-radius: 2px; }
 
-        .qt-actions { display: flex; gap: 8px; }
-
-        /* ---- Inline translation ---- */
+        /* Inline translation */
         .qt-translation {
           margin-top: 4px; padding: 4px 0; font-size: 13px; line-height: 1.4;
-          color: var(--kloak-text-sub, #aaa);
+          color: var(--kloak-text-sub);
           display: flex; align-items: flex-start; gap: 4px;
         }
         .qt-translation-icon { flex-shrink: 0; margin-top: 2px; opacity: 0.4; }
@@ -137,7 +209,6 @@
       document.head.appendChild(style);
     }
 
-    // Backend Event Listener
     _listenForBackendEvents() {
       document.addEventListener("qt-status", (e) => {
         const data = e.detail;
@@ -167,7 +238,6 @@
       });
     }
 
-    // Lifecycle
     async onEnable() {
       try {
         if (window.electronAPI?.getAddonConfig) {
@@ -184,13 +254,11 @@
       document.querySelectorAll(".qt-hover-btn").forEach((el) => el.remove());
     }
 
-    // Settings Panel
     renderSettings(container) {
       this._settingsContainer = container;
       const isReady = this._translator === "ready";
       const isLoading = this._translator === "initializing";
 
-      // Status display
       let dotClass = "qt-dot-off";
       let statusTitle = "Offline";
       let statusSub = "AI engine is not loaded.";
@@ -198,37 +266,38 @@
       if (isReady) {
         dotClass = "qt-dot-on";
         statusTitle = "Active";
-        statusSub = "On-device AI running in isolated background process.";
+        statusSub = "On-device AI running in isolated background window.";
       } else if (isLoading) {
         dotClass = "qt-dot-load";
         statusTitle = "Loading...";
         statusSub =
           this._progress.status === "downloading"
-            ? `Downloading model weights...`
-            : "Starting isolated WASM AI process...";
+            ? "Downloading model weights..."
+            : "Starting AI engine...";
       }
 
-      const langOpts = LANGUAGES.map(
-        (l) =>
-          `<option value="${l.code}" ${l.code === this.config.targetLanguage ? "selected" : ""}>${l.name}</option>`,
-      ).join("");
+      const selectedLang = LANGUAGES.find(
+        (l) => l.code === this.config.targetLanguage,
+      );
 
       container.innerHTML = `
         <div class="qt-settings">
 
-          <!-- Status Card -->
+          <!-- Status -->
           <div class="qt-card">
-            <div class="qt-row" style="gap:14px;">
+            <div class="qt-row">
               <div class="qt-dot ${dotClass}"></div>
               <div style="flex:1;">
-                <p class="qt-title">${statusTitle}</p>
-                <p class="qt-sub">${statusSub}</p>
+                <p style="margin:0;font-size:14px;font-weight:600;color:var(--kloak-text-main);">${statusTitle}</p>
+                <p style="margin:0;font-size:12px;color:var(--kloak-text-sub);line-height:1.4;">${statusSub}</p>
               </div>
             </div>
             ${
               isLoading && this._progress.status === "downloading"
-                ? `<div class="qt-progress"><div class="qt-progress-bar" style="width:${this._progress.percent}%"></div></div>
-                   <div class="qt-progress-label">${this._progress.percent}% — ${(this._progress.file || "").split("/").pop()}</div>`
+                ? `<div class="kloak-progress-container" style="margin-top:10px;">
+                     <div class="kloak-progress-bar" style="width:${this._progress.percent}%;background:var(--kloak-accent-warning);"></div>
+                   </div>
+                   <p class="kloak-progress-status">${this._progress.percent}% — ${(this._progress.file || "").split("/").pop()}</p>`
                 : ""
             }
             ${
@@ -238,47 +307,61 @@
             }
           </div>
 
-          <!-- Model Actions -->
-          <div class="qt-card">
-            <span class="qt-label">Model · Xenova/NLLB-200 (Multilingual)</span>
-            <p class="qt-sub" style="margin-bottom:10px;">One model covers all 200+ languages. ~200 MB download, cached locally after first load.</p>
+          <!-- Model -->
+          <div class="addon-settings-item">
+            <label class="addon-label">Model</label>
+            <div class="addon-val" style="font-size:12px;color:var(--kloak-text-sub);margin-bottom:8px;">
+              Xenova/NLLB-200 multilingual. Covers 200+ languages. Cached locally after first download.
+            </div>
             <div class="qt-actions">
-              <button id="qt-init" class="qt-btn qt-btn-primary qt-btn-full" ${isReady || isLoading ? "disabled" : ""}>
-                ${isReady ? "✓ Loaded" : isLoading ? "Initialising..." : "Initialize AI"}
+              <button id="qt-init" class="kloak-btn-primary" ${isReady || isLoading ? "disabled" : ""} style="flex:1;justify-content:center;${isReady || isLoading ? "opacity:0.4;cursor:not-allowed;" : ""}">
+                ${isReady ? "Loaded" : isLoading ? "Initialising..." : "Initialize AI"}
               </button>
-              <button id="qt-unload" class="qt-btn qt-btn-primary" ${!isReady ? "disabled" : ""} title="Unload model from memory">Unload</button>
-              <button id="qt-delete" class="qt-btn qt-btn-danger" ${isLoading ? "disabled" : ""} title="Delete cached model files from disk">Delete</button>
+              <button id="qt-unload" class="kloak-btn-primary" ${!isReady ? "disabled" : ""} style="${!isReady ? "opacity:0.4;cursor:not-allowed;" : ""}">Unload</button>
+              <button id="qt-delete" class="kloak-btn-primary qt-btn-danger" ${isLoading ? "disabled" : ""} style="${isLoading ? "opacity:0.4;cursor:not-allowed;" : ""}">Delete</button>
             </div>
           </div>
 
-          <!-- Translate Mode -->
-          <div class="qt-card">
-            <span class="qt-label">Translation Mode</span>
-            <div class="qt-radio-group">
-              <div class="qt-radio ${this.config.translateMode === "selected" ? "active" : ""}" data-mode="selected">Selected Only</div>
-              <div class="qt-radio ${this.config.translateMode === "all" ? "active" : ""}" data-mode="all">All Messages</div>
+          <!-- Translation Mode -->
+          <div class="addon-settings-item">
+            <label class="addon-label">Translation Mode</label>
+            <div>
+              <label class="qt-mode-row">
+                <input type="radio" name="qt-mode" value="selected" ${this.config.translateMode === "selected" ? "checked" : ""}>
+                <div>
+                  <div class="qt-mode-label">Selected Only</div>
+                  <div class="qt-mode-desc">Hover over a message and click the translate icon.</div>
+                </div>
+              </label>
+              <label class="qt-mode-row" style="padding-top:0;">
+                <input type="radio" name="qt-mode" value="all" ${this.config.translateMode === "all" ? "checked" : ""}>
+                <div>
+                  <div class="qt-mode-label">All Messages</div>
+                  <div class="qt-mode-desc">All visible messages are translated automatically.</div>
+                </div>
+              </label>
             </div>
-            <p class="qt-sub" style="margin-top:8px;">
-              ${
-                this.config.translateMode === "selected"
-                  ? "Hover over a message and click the translate icon to translate it."
-                  : "All visible messages are translated automatically."
-              }
-            </p>
           </div>
 
           <!-- Target Language -->
-          <div class="qt-card">
-            <span class="qt-label">Target Language</span>
-            <select id="qt-lang" class="qt-select">${langOpts}</select>
+          <div class="addon-settings-item">
+            <label class="addon-label">Target Language</label>
+            <div class="qt-dropdown" id="qt-lang-dropdown">
+              <input type="text" class="qt-dropdown-input" id="qt-lang-input"
+                placeholder="Search languages..."
+                value="${selectedLang ? selectedLang.name : ""}"
+                autocomplete="off">
+              <div class="qt-dropdown-list" id="qt-lang-list"></div>
+            </div>
           </div>
 
           <!-- Save -->
-          <button id="qt-save" class="qt-btn qt-btn-primary qt-btn-full">Save Settings</button>
+          <button id="qt-save" class="addon-btn-save">Save Settings</button>
         </div>
       `;
 
-      // Event Handlers
+      // --- Event Handlers ---
+
       container.querySelector("#qt-init").onclick = () =>
         this._initTranslator();
 
@@ -289,34 +372,32 @@
       container.querySelector("#qt-delete").onclick = async () => {
         if (
           confirm(
-            "Delete the cached model files? You'll need to re-download (~200 MB) to use translation again.",
+            "Delete the cached model files? You'll need to re-download to use translation again.",
           )
         ) {
           await window.electronAPI.deleteTranslatorCache();
         }
       };
 
-      container.querySelectorAll(".qt-radio").forEach((el) => {
-        el.onclick = () => {
-          container
-            .querySelectorAll(".qt-radio")
-            .forEach((r) => r.classList.remove("active"));
-          el.classList.add("active");
-          this.config.translateMode = el.dataset.mode;
-          // Re-render to update description
-          this.renderSettings(container);
+      // Radio mode
+      container.querySelectorAll('input[name="qt-mode"]').forEach((radio) => {
+        radio.onchange = () => {
+          this.config.translateMode = radio.value;
         };
       });
 
-      container.querySelector("#qt-save").onclick = () => {
-        this.config.targetLanguage = container.querySelector("#qt-lang").value;
+      // Searchable language dropdown
+      this._setupDropdown(container);
+
+      // Save button
+      const saveBtn = container.querySelector("#qt-save");
+      saveBtn.onclick = () => {
         if (window.electronAPI?.saveAddonConfig) {
           window.electronAPI.saveAddonConfig({
             addonId: ADDON_ID,
             data: this.config,
           });
         }
-        // If mode changed, refresh translations
         this._removeAllTranslations();
         if (
           this.config.translateMode === "all" &&
@@ -324,8 +405,79 @@
         ) {
           this._translateAllVisible();
         }
-        alert("Settings saved!");
+        const originalText = saveBtn.textContent;
+        saveBtn.textContent = "Settings saved!";
+        setTimeout(() => {
+          if (document.body.contains(saveBtn)) {
+            saveBtn.textContent = originalText;
+          }
+        }, 2000);
       };
+    }
+
+    _setupDropdown(container) {
+      const input = container.querySelector("#qt-lang-input");
+      const list = container.querySelector("#qt-lang-list");
+      let selectedCode = this.config.targetLanguage;
+
+      const renderList = (filter = "") => {
+        const query = filter.toLowerCase();
+        const filtered = query
+          ? LANGUAGES.filter((l) => l.name.toLowerCase().includes(query))
+          : LANGUAGES;
+
+        if (filtered.length === 0) {
+          list.innerHTML = `<div class="qt-dropdown-empty">No languages found</div>`;
+          return;
+        }
+
+        list.innerHTML = filtered
+          .map(
+            (l) =>
+              `<div class="qt-dropdown-item${l.code === selectedCode ? " selected" : ""}" data-code="${l.code}">${l.name}</div>`,
+          )
+          .join("");
+
+        list.querySelectorAll(".qt-dropdown-item").forEach((item) => {
+          item.onclick = () => {
+            selectedCode = item.dataset.code;
+            this.config.targetLanguage = selectedCode;
+            input.value = item.textContent;
+            list.classList.remove("open");
+          };
+        });
+      };
+
+      input.onfocus = () => {
+        input.select();
+        renderList(input.value === (LANGUAGES.find((l) => l.code === selectedCode)?.name || "") ? "" : input.value);
+        list.classList.add("open");
+      };
+
+      input.oninput = () => {
+        renderList(input.value);
+        list.classList.add("open");
+      };
+
+      // Close dropdown when clicking outside
+      const closeHandler = (e) => {
+        if (!container.querySelector("#qt-lang-dropdown")?.contains(e.target)) {
+          list.classList.remove("open");
+          // Restore display name if user typed gibberish
+          const match = LANGUAGES.find((l) => l.code === selectedCode);
+          if (match) input.value = match.name;
+        }
+      };
+      document.addEventListener("mousedown", closeHandler);
+
+      // Clean up listener if settings container is removed
+      const observer = new MutationObserver(() => {
+        if (!document.body.contains(container)) {
+          document.removeEventListener("mousedown", closeHandler);
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
     }
 
     _updateSettingsUI() {
@@ -337,7 +489,6 @@
       }
     }
 
-    // Init
     async _initTranslator() {
       this._translator = "initializing";
       this._progress = { status: "initializing", percent: 0, file: "" };
@@ -347,7 +498,6 @@
         const res = await window.electronAPI.initTranslator();
         if (!res || !res.success)
           throw new Error(res?.error || "Backend failure");
-        // Actual ready/error status comes via qt-status events
       } catch (err) {
         this._translator = null;
         this._progress = { status: "error", message: err.message };
@@ -355,7 +505,6 @@
       }
     }
 
-    // Translation
     async _translateText(text) {
       if (this._translator !== "ready") return null;
       try {
@@ -370,7 +519,6 @@
       }
     }
 
-    // DOM: Observer & Message Injection
     _setupObserver() {
       const observer = new MutationObserver(() =>
         this._processVisibleMessages(),
@@ -381,16 +529,13 @@
     }
 
     _processVisibleMessages() {
-      // Find all message text containers (both server & DM structure)
       const messageDivs = document.querySelectorAll("div[data-message-id]");
 
       messageDivs.forEach((msgDiv) => {
-        // Inject hover button (if "selected" mode)
         if (this.config.translateMode === "selected") {
           this._injectHoverButton(msgDiv);
         }
 
-        // Auto-translate (if "all" mode)
         if (
           this.config.translateMode === "all" &&
           this._translator === "ready" &&
@@ -402,7 +547,6 @@
     }
 
     _injectHoverButton(msgDiv) {
-      // Walk up to find the hover menu (the absolute positioned div)
       const messageRow = msgDiv.closest(".group.relative");
       if (!messageRow) return;
 
@@ -411,12 +555,10 @@
       );
       if (!hoverMenu || hoverMenu.querySelector(".qt-hover-btn")) return;
 
-      // Find the "Add reaction" button to insert before
       const addReactionBtn = hoverMenu.querySelector(
         'button[aria-label="Add reaction"]',
       );
 
-      // Create translate button matching native style
       const btn = document.createElement("button");
       btn.className =
         "qt-hover-btn p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground";
@@ -428,18 +570,16 @@
       btn.onclick = (e) => {
         e.stopPropagation();
         if (this._translator !== "ready") return;
-        if (msgDiv.querySelector(".qt-translation")) return; // already translated
+        if (msgDiv.querySelector(".qt-translation")) return;
         this._queueTranslation(msgDiv);
       };
 
       if (addReactionBtn) {
-        // Insert a divider + the button before "Add reaction"
         const divider = document.createElement("div");
         divider.className = "qt-hover-btn w-px h-5 bg-border mx-0.5";
         hoverMenu.insertBefore(divider, addReactionBtn);
         hoverMenu.insertBefore(btn, addReactionBtn);
       } else {
-        // Fallback: append at the start
         hoverMenu.insertBefore(btn, hoverMenu.firstChild);
       }
     }
@@ -453,7 +593,6 @@
       });
     }
 
-    // Translation Queue (sequential to avoid overloading)
     _queueTranslation(msgDiv) {
       if (this._translator !== "ready") return;
       if (msgDiv.querySelector(".qt-translation")) return;
@@ -469,13 +608,11 @@
         const msgDiv = this._queue.shift();
         if (msgDiv.querySelector(".qt-translation")) continue;
 
-        // Extract text from the message
         const inlineSpan = msgDiv.querySelector("span.inline");
         if (!inlineSpan) continue;
         const originalText = inlineSpan.innerText.trim();
         if (!originalText || originalText.length < 2) continue;
 
-        // Show loading indicator
         const translationDiv = document.createElement("div");
         translationDiv.className = "qt-translation";
         translationDiv.innerHTML = `
@@ -498,14 +635,12 @@
           translationDiv.remove();
         }
 
-        // Small delay between translations to keep UI responsive
         await new Promise((r) => setTimeout(r, 100));
       }
 
       this._isProcessing = false;
     }
 
-    // Cleanup
     _removeAllTranslations() {
       document.querySelectorAll(".qt-translation").forEach((el) => el.remove());
       document.querySelectorAll(".qt-hover-btn").forEach((el) => el.remove());
