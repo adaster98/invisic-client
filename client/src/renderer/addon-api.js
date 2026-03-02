@@ -5,9 +5,11 @@ class KloakAddonAPI {
     this.apiKey = null;
     this.authToken = null;
     this.userProfile = null;
-    this.currentServerID = null; // Track current server
-    this.currentServerName = null; // Track current server name
-    this.currentDMStatus = false; // Track if user is in DMs
+    this.currentServerID = null;
+    this.currentServerName = null;
+    this.currentChannelID = null;
+    this.currentDMStatus = false;
+    this.currentDMID = null;
     this._serverMap = new Map(); // Cache of server ID -> Name
     this._readyCallbacks = [];
     this.isReady = false;
@@ -49,6 +51,7 @@ class KloakAddonAPI {
       },
     };
 
+    this._watchLocalStorage();
     this._setupInterceptor();
   }
 
@@ -61,31 +64,8 @@ class KloakAddonAPI {
     }
   }
 
-  _fireReady(isFinalAttempt = false) {
+  _fireReady() {
     if (this.isReady) return;
-
-    // Be patient: If we don't have a server ID yet, wait up to 5 seconds
-    // This allows the initial server context to be captured before addons load.
-    if (!this.currentServerID && !isFinalAttempt && this.userID) {
-      if (!this._serverWaitTimeout) {
-        if (window.electronAPI && window.electronAPI.log) {
-          window.electronAPI.log(
-            "Kloak Addons API: Waiting up to 1s for server context...",
-          );
-        }
-        this._serverWaitTimeout = setTimeout(() => {
-          this._serverWaitTimeout = null;
-          this._fireReady(true);
-        }, 1000);
-      }
-      return;
-    }
-
-    if (this._serverWaitTimeout) {
-      clearTimeout(this._serverWaitTimeout);
-      this._serverWaitTimeout = null;
-    }
-
     this.isReady = true;
 
     console.log("[Kloak Addon API] API Status Check (Ready):", {
@@ -162,6 +142,40 @@ class KloakAddonAPI {
     }
   }
 
+  _watchLocalStorage() {
+    this.currentServerID = localStorage.getItem("kloak-current-server-id");
+    this.currentChannelID = localStorage.getItem("kloak-current-channel-id");
+    this.currentDMID = localStorage.getItem("kloak-current-dm-id");
+    this.currentDMStatus =
+      localStorage.getItem("kloak-dm-view-active") === "true";
+    if (this.currentServerID) {
+      this.currentServerName =
+        this._serverMap.get(this.currentServerID) || "Unknown Server";
+    }
+
+    const self = this;
+    const orig = localStorage.setItem.bind(localStorage);
+    localStorage.setItem = function (key, value) {
+      orig(key, value);
+      switch (key) {
+        case "kloak-current-server-id":
+          self.currentServerID = value || null;
+          self.currentServerName =
+            self._serverMap.get(value) || "Unknown Server";
+          break;
+        case "kloak-current-channel-id":
+          self.currentChannelID = value || null;
+          break;
+        case "kloak-dm-view-active":
+          self.currentDMStatus = value === "true";
+          break;
+        case "kloak-current-dm-id":
+          self.currentDMID = value || null;
+          break;
+      }
+    };
+  }
+
   _setupInterceptor() {
     const originalFetch = window.fetch;
     const self = this;
@@ -176,11 +190,8 @@ class KloakAddonAPI {
       let options = args[1] || {};
 
       const isLoginUser = url.includes("login_user");
-      const isPingHealth = url.includes("ping_health");
       const isUpdateProfile = url.includes("update-user-profile");
-      const isGetServerChannels = url.includes("get_server_channels");
       const isGetUserServers = url.includes("get_user_servers");
-      const isMarkDMRead = url.includes("mark_dm_read");
 
       let currentXHash = null;
       let currentApiKey = null;
@@ -214,48 +225,6 @@ class KloakAddonAPI {
         self.authToken = currentAuthToken;
       if (currentXHash && !self.xHash) self.xHash = currentXHash;
 
-      if (isGetServerChannels && options.body) {
-        try {
-          const body = JSON.parse(options.body);
-          if (body._server_id && body._server_id !== self.currentServerID) {
-            self.currentServerID = body._server_id;
-            self.currentServerName =
-              self._serverMap.get(self.currentServerID) || "Unknown Server";
-            self.currentDMStatus = false;
-
-            console.log(
-              `[Kloak Addon API] Server Switched: ${self.currentServerName} (${self.currentServerID})`,
-            );
-            if (window.electronAPI && window.electronAPI.log) {
-              window.electronAPI.log(
-                `Kloak Addons API: Server Switched to ${self.currentServerName}`,
-              );
-            }
-
-            // Trigger ready state early if we were waiting for the server context
-            if (self.userID && !self.isReady) {
-              self._fireReady();
-            }
-          }
-        } catch (e) {
-          console.error("AddonAPI Failed to parse get_server_channels body", e);
-        }
-      }
-
-      if (isMarkDMRead) {
-        if (!self.currentDMStatus) {
-          self.currentDMStatus = true;
-          self.currentServerID = null;
-          self.currentServerName = null;
-          console.log("[Kloak Addon API] Switched to Direct Messages");
-          if (window.electronAPI && window.electronAPI.log) {
-            window.electronAPI.log("Kloak Addons API: Switched to DMs");
-          }
-        }
-      }
-
-      // If we have everything and haven't fetched profile yet, do it now.
-      // This covers ping_health or any other early request that might have keys.
       if (
         self.xHash &&
         self.apiKey &&
