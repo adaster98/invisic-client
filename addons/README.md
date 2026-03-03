@@ -21,6 +21,12 @@ A powerful multitool for developers. View hidden user info and copy raw database
 **- quick-react:**<br>
 Puts your most recently used emojis in the message hover menu for fast access.
 
+**- dm-folders:**<br>
+Organise your DMs into collapsible, colour-coded folders.
+
+**- permissions-viewer:**<br>
+Reveal the inner workings of any server — inspect role permissions and inheritance.
+
 ## Getting started:
 
 Choose one of the pre-made addons. <br>
@@ -49,42 +55,166 @@ You can also choose to have a settings menu, else it will fall back to an inform
 
 ### Using the KloakAddonAPI
 
-The `window.KloakAddonAPI` provides easy access to user credentials, profile data, handling the complexities of intercepting network requests, configuration files and file access.
+The `window.KloakAddonAPI` provides easy access to user credentials, profile data, cached messages, server/channel context, and a unified event system. All network interception is handled centrally — addons never need to patch `window.fetch`.
 
-#### RPC API
-
-- `api.userID`: Unique UUID for the logged-in user.
-- `api.xHash`: The X-Key-Hash required for many RPC requests.
-- `api.userProfile`: Full profile object (username, display name, avatar, bio, status).
-- `api.currentServerID`: The unique identifier (UUID) for the server the user is currently viewing (null if in DMs).
-- `api.currentServerName`: The display name of the server the user is currently viewing (null if in DMs).
-- `api.currentDMStatus`: A boolean indicating if the user is currently viewing direct messages.
-- `api.apiKey`: Supabase API key for RPC headers.
-- `api.authToken`: JWT Authorization token for RPC headers.
-
-#### Settings API
-
-- `api.settings.get(addonId)`: Returns a Promise that resolves to the addon's `config.json` object.
-- `api.settings.set(addonId, data)`: Saves the provided data object to the addon's `config.json`.
-
-#### File System API
-
-Helper methods to manage files within your addon's own directory (`client/addons/<addon-id>/`).
-
-- `api.fs.read(addonId, filePath)`: Returns a Promise that resolves to the string content of the file.
-- `api.fs.write(addonId, filePath, data)`: Writes string data to the specified file (creates directories if needed).
-- `api.fs.list(addonId, subDir)`: Returns a Promise resolving to a list of filenames in the directory.
-- `api.fs.delete(addonId, filePath)`: Deletes the specified file or directory.
-- `api.fs.exists(addonId, filePath)`: Returns a Promise resolving to a boolean.
-
-**Example Usage:**
-Since credentials may change or be captured after an addon loads, use `onReady` to ensure the data is available:
+**Always use `onReady` before accessing auth-dependent data:**
 
 ```javascript
 window.KloakAddonAPI.onReady((api) => {
   console.log("Logged in as:", api.userProfile.username);
-
-  // Use credentials for custom RPC calls
-  // api.xHash, api.authToken, etc.
 });
 ```
+
+---
+
+#### Core Properties
+
+- `api.userID` — Unique UUID for the logged-in user.
+- `api.authToken` — JWT Authorization token (already includes `"Bearer "` prefix).
+- `api.apiKey` — Supabase API key.
+- `api.xHash` — The X-Key-Hash required for RPC requests.
+- `api.userProfile` — Full profile object (`username`, `display_name`, `avatar_url`, `bio`, `status`).
+- `api.currentServerID` — UUID of the server currently being viewed (`null` if in DMs).
+- `api.currentServerName` — Display name of the current server.
+- `api.currentChannelID` — UUID of the current channel.
+- `api.currentDMStatus` — `true` if the user is currently viewing DMs.
+- `api.currentDMID` — UUID of the current DM conversation.
+- `api.isReady` — `true` once auth and profile data are available.
+- `api.originalFetch` — The native `fetch` before any interception. Use this if you need raw HTTP access without triggering the central interceptor.
+
+---
+
+#### `api.events` — Event Bus
+
+Subscribe to app-level events without any fetch patching.
+
+```javascript
+api.events.on(eventName, callback)   // subscribe
+api.events.off(eventName, callback)  // unsubscribe
+api.events.once(eventName, callback) // subscribe for one delivery
+```
+
+**Available events:**
+
+| Event | Payload |
+|---|---|
+| `ready` | `api` instance |
+| `serverChange` | `{ serverID, serverName, previousServerID }` |
+| `channelChange` | `{ channelID, previousChannelID }` |
+| `dmStatusChange` | `{ isDM, dmID }` |
+| `dmChange` | `{ dmID, previousDMID }` |
+| `messagesLoaded` | `{ channelId, messages[] }` |
+| `messageReceived` | `{ channelId, userId, content, replyToId }` |
+| `messageEdited` | `{ messageId, previousContent, newContent, editedBy, timestamp }` |
+| `messageDeleted` | `{ messageId, message (snapshot), deletedBy, timestamp }` |
+| `reactionAdded` | `{ messageId, emoji, userId }` |
+| `reactionRemoved` | `{ messageId, emoji, userId }` |
+| `dmConversationsLoaded` | `{ conversations[] }` |
+| `serverEmojisLoaded` | `{ serverId, emojis[] }` |
+| `membersLoaded` | `{ serverId, members[] }` |
+| `rolesLoaded` | `{ serverId, roles[] }` |
+| `userProfileFetched` | `{ userId, user }` |
+| `themeChange` | `{ theme }` |
+
+---
+
+#### `api.rpc(functionName, params)` — RPC Wrapper
+
+Make authenticated Supabase RPC calls without constructing headers manually. Throws if not authenticated or if the request fails.
+
+```javascript
+const data = await api.rpc("get_user_profile_secure", {
+  _target_user_id: someUserId,
+  _requesting_user_id: api.userID,
+});
+```
+
+---
+
+#### `api.messages` — Message Cache & Events
+
+- `getCached(channelId)` — Returns the cached messages array for a channel/DM (sorted by time).
+- `getById(messageId)` — Searches all channel caches for a single message.
+- `onMessage(cb)` / `offMessage(cb)` — New message sent events.
+- `onEdit(cb)` / `offEdit(cb)` — Message edit events (includes `previousContent`).
+- `onDelete(cb)` / `offDelete(cb)` — Message delete events (includes full message snapshot).
+- `addReaction(messageId, emoji)` — Adds an emoji reaction (handles server vs DM automatically).
+- `removeReaction(messageId, emoji)` — Removes an emoji reaction.
+
+---
+
+#### `api.servers` — Server Context
+
+- `getAll()` — Returns `[{ id, name }]` for all known servers.
+- `getCurrent()` — Returns `{ id, name }` for the current server.
+- `onChange(cb)` / `offChange(cb)` — Server switch events.
+- `getMembers(serverId)` — Returns cached member list for a server.
+- `getRoles(serverId)` — Returns cached role list for a server.
+
+---
+
+#### `api.channels` — Channel Context
+
+- `getCurrentId()` — Returns the current channel UUID.
+- `onChange(cb)` / `offChange(cb)` — Channel switch events.
+
+---
+
+#### `api.emojis` — Server Emoji Access
+
+- `getForServer(serverId)` — Returns emoji list (cache-first, 60s TTL). Each emoji: `{ id, name, file_path, url }`.
+- `getCurrent()` — Emojis for the current server.
+- `getImageUrl(filePath)` — Builds the public storage URL for an emoji image.
+- `onLoad(cb)` / `offLoad(cb)` — Emoji cache update events.
+
+---
+
+#### `api.users` — User Lookup
+
+- `getCached(userId)` — Returns a user from cache (or `null`).
+- `fetch(userId)` — Cache-first fetch with `get_user_by_id` RPC fallback (5-minute TTL, deduped).
+- `getSelf()` — Returns the current user's profile.
+
+---
+
+#### `api.conversations` — DM Conversations
+
+- `getAll()` — Returns the cached conversation list.
+- `fetch()` — Fetches fresh conversations via RPC, populates cache, emits `dmConversationsLoaded`.
+- `onLoad(cb)` / `offLoad(cb)` — Conversation list load events.
+
+---
+
+#### `api.ui` — Theme Access
+
+- `getTheme()` — Returns the current theme name from localStorage.
+- `onThemeChange(cb)` / `offThemeChange(cb)` — Theme change events.
+
+---
+
+#### `api.presence` — Typing Control
+
+- `suppressTyping` (boolean, default `false`) — Set to `true` to silently block the "is typing..." indicator from being sent to others.
+
+```javascript
+api.presence.suppressTyping = true;
+```
+
+---
+
+#### `api.settings` — Addon Config
+
+- `api.settings.get(addonId)` — Returns a Promise resolving to the addon's `config.json` object.
+- `api.settings.set(addonId, data)` — Saves the provided data to the addon's `config.json`.
+
+---
+
+#### `api.fs` — Sandboxed File System
+
+All paths are sandboxed to your addon's own directory.
+
+- `api.fs.read(addonId, filePath)` — Returns a Promise resolving to the file content string.
+- `api.fs.write(addonId, filePath, data)` — Writes string data to a file (creates directories as needed).
+- `api.fs.list(addonId, subDir)` — Returns a Promise resolving to a list of filenames.
+- `api.fs.delete(addonId, filePath)` — Deletes a file or directory.
+- `api.fs.exists(addonId, filePath)` — Returns a Promise resolving to a boolean.

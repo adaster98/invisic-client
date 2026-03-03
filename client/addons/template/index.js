@@ -12,155 +12,194 @@
   // 1. DEFINE THE ID HERE! (This must exactly match your folder name)
   const ADDON_ID = "template";
 
+  // ── State ──────────────────────────────────────────────────────────────────
+  // Keep references to event handlers so you can remove them in onDisable.
+  let serverChangeHandler = null;
+  let channelChangeHandler = null;
+  let messageEditedHandler = null;
+
+  // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+  const enable = () => {
+    const api = window.KloakAddonAPI;
+    if (!api) return;
+
+    /**
+     * onReady fires once auth and profile data are available.
+     * Always wrap API-dependent logic here.
+     */
+    api.onReady((api) => {
+      console.log(`[${ADDON_ID}] Logged in as:`, api.userProfile.username);
+      console.log(`[${ADDON_ID}] User ID:`, api.userID);
+      console.log(`[${ADDON_ID}] Current server:`, api.currentServerName, `(${api.currentServerID})`);
+      console.log(`[${ADDON_ID}] In DMs:`, api.currentDMStatus);
+
+      // ── Events ─────────────────────────────────────────────────────────────
+      // Subscribe to server switches.
+      serverChangeHandler = ({ serverID, serverName, previousServerID }) => {
+        console.log(`[${ADDON_ID}] Switched to server: ${serverName} (${serverID})`);
+      };
+      api.events.on("serverChange", serverChangeHandler);
+
+      // Subscribe to channel switches.
+      channelChangeHandler = ({ channelID }) => {
+        console.log(`[${ADDON_ID}] Switched to channel: ${channelID}`);
+      };
+      api.events.on("channelChange", channelChangeHandler);
+
+      // Subscribe to message edits (includes previous content — useful for loggers).
+      messageEditedHandler = ({ messageId, previousContent, newContent, editedBy }) => {
+        console.log(`[${ADDON_ID}] Message ${messageId} edited by ${editedBy}`);
+        console.log(`  Before: ${previousContent}`);
+        console.log(`  After:  ${newContent}`);
+      };
+      api.events.on("messageEdited", messageEditedHandler);
+
+      // ── RPC ────────────────────────────────────────────────────────────────
+      // Make an authenticated RPC call without constructing headers manually.
+      // api.rpc() throws if not authenticated or if the server returns an error.
+      api
+        .rpc("get_user_profile_secure", {
+          _target_user_id: api.userID,
+          _requesting_user_id: api.userID,
+        })
+        .then((data) => {
+          const profile = Array.isArray(data) ? data[0] : data;
+          console.log(`[${ADDON_ID}] Profile via RPC:`, profile);
+        })
+        .catch((err) => {
+          console.error(`[${ADDON_ID}] RPC error:`, err.message);
+        });
+
+      // ── Message cache ──────────────────────────────────────────────────────
+      // Read already-loaded messages for the current channel.
+      if (api.currentChannelID) {
+        const messages = api.messages.getCached(api.currentChannelID);
+        console.log(`[${ADDON_ID}] ${messages.length} cached messages in current channel`);
+      }
+
+      // ── Server emojis ──────────────────────────────────────────────────────
+      // Fetch emojis for the current server (cache-first, 60s TTL).
+      if (api.currentServerID) {
+        api.emojis.getForServer(api.currentServerID).then((emojis) => {
+          console.log(`[${ADDON_ID}] ${emojis.length} server emojis`);
+          // Each emoji: { id, name, file_path, url }
+          // Get a usable image URL: api.emojis.getImageUrl(emoji.file_path)
+        });
+      }
+
+      // ── User lookup ────────────────────────────────────────────────────────
+      // Fetch a user profile by ID (cache-first, 5min TTL, deduped).
+      api.users.fetch(api.userID).then((user) => {
+        console.log(`[${ADDON_ID}] Fetched user:`, user?.username);
+      });
+
+      // ── DM Conversations ───────────────────────────────────────────────────
+      // Get cached conversations, or fetch fresh ones.
+      const cached = api.conversations.getAll();
+      if (cached.length > 0) {
+        console.log(`[${ADDON_ID}] ${cached.length} cached DM conversations`);
+      } else {
+        api.conversations.fetch().then((data) => {
+          console.log(`[${ADDON_ID}] Fetched ${data?.length ?? 0} DM conversations`);
+        });
+      }
+
+      // ── Presence ───────────────────────────────────────────────────────────
+      // Suppress the "is typing..." indicator.
+      // api.presence.suppressTyping = true;
+
+      // ── File system ────────────────────────────────────────────────────────
+      // Every addon has its own isolated directory. Paths are sandboxed.
+      const testFile = "hello.txt";
+      api.fs
+        .write(ADDON_ID, testFile, "Hello from the FS API!")
+        .then(() => api.fs.read(ADDON_ID, testFile))
+        .then((content) => console.log(`[${ADDON_ID}] Read back:`, content))
+        .catch((err) => console.error(`[${ADDON_ID}] FS error:`, err));
+    });
+  };
+
+  const disable = () => {
+    const api = window.KloakAddonAPI;
+
+    // Always remove event listeners in onDisable to avoid memory leaks and
+    // stale handlers firing after the addon is toggled off.
+    if (api?.events) {
+      if (serverChangeHandler) api.events.off("serverChange", serverChangeHandler);
+      if (channelChangeHandler) api.events.off("channelChange", channelChangeHandler);
+      if (messageEditedHandler) api.events.off("messageEdited", messageEditedHandler);
+    }
+    serverChangeHandler = null;
+    channelChangeHandler = null;
+    messageEditedHandler = null;
+
+    console.log(`[${ADDON_ID}] Disabled.`);
+  };
+
+  // ── Registration ───────────────────────────────────────────────────────────
+
   window.KloakAddons.registerAddon({
-    // --- 1. METADATA ---
     id: ADDON_ID,
     name: "Developer Template",
     description:
-      "A complete boilerplate showing how to use toggles, UI settings, and specific file storage.",
+      "A complete boilerplate showing how to use the KloakAddonAPI: events, RPC, message cache, emojis, file system, and settings.",
 
-    // --- 2. LIFECYCLE HOOKS ---
-    // Fires instantly when the user toggles the switch ON
-    onEnable: () => {
-      console.log(`[${ADDON_ID}] Addon Enabled!`);
+    onEnable: enable,
+    onDisable: disable,
 
-      /**
-       * NEW: KloakAddonAPI Usage
-       * Use the API to access user identity and authentication keys.
-       * Always wrap logic needing this data in the onReady callback.
-       */
-      if (window.KloakAddonAPI) {
-        window.KloakAddonAPI.onReady((api) => {
-          console.log(`[${ADDON_ID}] API Ready!`);
-          console.log(`[${ADDON_ID}] User ID:`, api.userID);
-          console.log(`[${ADDON_ID}] Auth Hash:`, api.xHash);
-          console.log(`[${ADDON_ID}] In DMs:`, api.currentDMStatus);
-          console.log(
-            `[${ADDON_ID}] Current Server:`,
-            api.currentServerName,
-            `(${api.currentServerID})`,
-          );
-
-          // You can also access the full user profile
-          if (api.userProfile) {
-            console.log(`[${ADDON_ID}] Username:`, api.userProfile.username);
-          }
-
-          // These keys are required for making authenticated RPC calls
-          // api.apiKey
-          // api.authToken
-
-          /**
-           * NEW: File System API
-           * Every addon has its own isolated folder.
-           * You can read, write, list and delete files here securely.
-           */
-          const testFile = "hello.txt";
-          const testData = "Hello from the FS API!";
-
-          api.fs
-            .write(ADDON_ID, testFile, testData)
-            .then(() => {
-              console.log(`[${ADDON_ID}] Successfully wrote to ${testFile}`);
-              return api.fs.read(ADDON_ID, testFile);
-            })
-            .then((content) => {
-              console.log(`[${ADDON_ID}] Read from ${testFile}:`, content);
-            })
-            .catch((err) => {
-              console.error(`[${ADDON_ID}] FS Error:`, err);
-            });
-        });
-      }
-    },
-
-    // Fires instantly when the user toggles the switch OFF
-    onDisable: () => {
-      console.log(`[${ADDON_ID}] Addon Disabled!`);
-    },
-
-    // --- 3. SETTINGS MENU ---
+    // --- Settings menu -------------------------------------------------------
+    // Return a populated `container` element. Called when the user opens your
+    // addon's settings modal. Can be async.
     renderSettings: async (container) => {
-      // A. Show a quick loading message
       container.innerHTML = `<p style="color: var(--kloak-text-sub); text-align: center;">Loading settings...</p>`;
 
-      // B. Fetch this specific addon's config.json safely
       let config = {};
       try {
-        // NEW WAY (Recommended): Use the KloakAddonAPI settings provider
-        if (window.KloakAddonAPI && window.KloakAddonAPI.settings) {
-          config = await window.KloakAddonAPI.settings.get(ADDON_ID);
-        }
-        // OLD WAY: Direct Electron IPC (still works!)
-        else if (window.electronAPI && window.electronAPI.getAddonConfig) {
-          const savedConfig = await window.electronAPI.getAddonConfig(ADDON_ID);
-          if (savedConfig) config = savedConfig;
-        }
+        config = await window.KloakAddonAPI.settings.get(ADDON_ID);
       } catch (err) {
         console.error(`[${ADDON_ID}] Failed to load config:`, err);
       }
 
-      // C. Set default values if the config is empty (first time launch)
       const currentText = config.customText || "Default String";
       const isFeatureEnabled = config.enableFeature === true ? "checked" : "";
 
-      // D. Draw the UI
       container.innerHTML = `
-            <div class="addon-settings-item">
-            <p style="margin: 0; color: var(--kloak-text-sub); font-size: 13px;">Modify these inputs to see how state is saved to your local folder.</p>
+        <div class="addon-settings-item">
+          <p style="margin: 0; color: var(--kloak-text-sub); font-size: 13px;">Modify these inputs to see how state is saved to your local folder.</p>
 
-            <div style="margin-top: 12px;">
+          <div style="margin-top: 12px;">
             <label class="addon-label">Custom String</label>
-            <input id="tpl-text-input" type="text" value="${currentText}" style="width: 100%; padding: 10px; background: var(--kloak-bg-box); border: 1px solid var(--kloak-bg-btn); border-radius: 6px; color: var(--kloak-text-main); margin-top: 6px; box-sizing: border-box; outline: none; transition: border 0.2s;">
-            </div>
+            <input id="tpl-text-input" type="text" value="${currentText}"
+              style="width: 100%; padding: 10px; background: var(--kloak-bg-box); border: 1px solid var(--kloak-bg-btn); border-radius: 6px; color: var(--kloak-text-main); margin-top: 6px; box-sizing: border-box; outline: none; transition: border 0.2s;">
+          </div>
 
-            <label class="kloak-checkbox-label" style="user-select: none;">
-            <input id="tpl-checkbox" type="checkbox" ${isFeatureEnabled} style="cursor: pointer; width: 16px; height: 16px; accent-color: var(--kloak-text-main);">
+          <label class="kloak-checkbox-label" style="user-select: none;">
+            <input id="tpl-checkbox" type="checkbox" ${isFeatureEnabled}
+              style="cursor: pointer; width: 16px; height: 16px; accent-color: var(--kloak-text-main);">
             Enable Secret Feature
-            </label>
+          </label>
 
-            <button id="tpl-save-btn" class="addon-btn-save">Save Changes</button>
-            </div>
-            `;
+          <button id="tpl-save-btn" class="addon-btn-save">Save Changes</button>
+        </div>
+      `;
 
-      // E. Handle the Save Event
-      const saveBtn = container.querySelector("#tpl-save-btn");
-      const savedMsg = container.querySelector("#tpl-saved-msg");
       const textInput = container.querySelector("#tpl-text-input");
       const checkboxInput = container.querySelector("#tpl-checkbox");
+      const saveBtn = container.querySelector("#tpl-save-btn");
 
-      // Add a nice focus effect to the input
-      textInput.addEventListener(
-        "focus",
-        () => (textInput.style.borderColor = "var(--kloak-text-main)"),
-      );
-      textInput.addEventListener(
-        "blur",
-        () => (textInput.style.borderColor = "var(--kloak-bg-btn)"),
-      );
+      textInput.addEventListener("focus", () => (textInput.style.borderColor = "var(--kloak-text-main)"));
+      textInput.addEventListener("blur", () => (textInput.style.borderColor = "var(--kloak-bg-btn)"));
 
       saveBtn.addEventListener("click", () => {
-        // Update our config object in memory
         config.customText = textInput.value;
         config.enableFeature = checkboxInput.checked;
 
-        // Send it back through the secure bridge to write to the hard drive
-        if (window.KloakAddonAPI && window.KloakAddonAPI.settings) {
-          window.KloakAddonAPI.settings.set(ADDON_ID, config);
+        window.KloakAddonAPI.settings.set(ADDON_ID, config);
 
-          const originalText = saveBtn.textContent;
-          saveBtn.textContent = "✓ Saved to config.json";
-          setTimeout(() => (saveBtn.textContent = originalText), 2000);
-        } else if (window.electronAPI && window.electronAPI.saveAddonConfig) {
-          window.electronAPI.saveAddonConfig({
-            addonId: ADDON_ID,
-            data: config,
-          });
-
-          const originalText = saveBtn.textContent;
-          saveBtn.textContent = "✓ Saved to config.json";
-          setTimeout(() => (saveBtn.textContent = originalText), 2000);
-        }
+        const originalText = saveBtn.textContent;
+        saveBtn.textContent = "✓ Saved to config.json";
+        setTimeout(() => (saveBtn.textContent = originalText), 2000);
       });
     },
   });
