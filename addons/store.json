@@ -26,43 +26,37 @@
   "stealth-mode": {
     "name": "Stealth Mode",
     "description": "Blocks the 'User is typing...' indicator from being sent to others.",
-    "version": "1.0.1",
-    "url": "https://codeberg.org/adaster98/kloak-client-unofficial/raw/branch/main/addons/release/stealth-mode/stealth-mode-1.0.1.zip"
+    "version": "1.0.2",
+    "url": "https://codeberg.org/adaster98/kloak-client-unofficial/raw/branch/main/addons/release/stealth-mode/stealth-mode-1.0.2.zip"
   },
   "developer-toolkit": {
     "name": "Developer Toolkit",
     "description": "A powerful multitool for developers. View hidden user info and copy raw database IDs directly from the chat.",
-    "version": "1.0.7",
-    "url": "https://codeberg.org/adaster98/kloak-client-unofficial/raw/branch/main/addons/release/developer-toolkit/developer-toolkit-1.0.7.zip"
+    "version": "1.0.8",
+    "url": "https://codeberg.org/adaster98/kloak-client-unofficial/raw/branch/main/addons/release/developer-toolkit/developer-toolkit-1.0.8.zip"
   },
   "quick-react": {
     "name": "Quick React",
     "description": "Quickly react to messages with your most used emojis.",
-    "version": "1.0.5",
-    "url": "https://codeberg.org/adaster98/kloak-client-unofficial/raw/branch/main/addons/release/quick-react/quick-react-1.0.5.zip"
+    "version": "1.0.6",
+    "url": "https://codeberg.org/adaster98/kloak-client-unofficial/raw/branch/main/addons/release/quick-react/quick-react-1.0.6.zip"
   },
   "dm-folders": {
     "name": "DM Folders",
     "description": "Organize your DMs into folders.",
-    "version": "1.0.1",
-    "url": "https://codeberg.org/adaster98/kloak-client-unofficial/raw/branch/main/addons/release/dm-folders/dm-folders-1.0.1.zip"
+    "version": "1.0.2",
+    "url": "https://codeberg.org/adaster98/kloak-client-unofficial/raw/branch/main/addons/release/dm-folders/dm-folders-1.0.2.zip"
   },
   "permissions-viewer": {
     "name": "Permissions Viewer",
     "description": "Reveal the inner workings of any server — inspect role permissions and inheritance.",
-    "version": "1.0.0",
-    "url": "https://codeberg.org/adaster98/kloak-client-unofficial/raw/branch/main/addons/release/permissions-viewer/permissions-viewer-1.0.0.zip"
+    "version": "1.0.1",
+    "url": "https://codeberg.org/adaster98/kloak-client-unofficial/raw/branch/main/addons/release/permissions-viewer/permissions-viewer-1.0.1.zip"
   },
   "quick-translate": {
     "name": "Quick Translate",
     "description": "Translate messages on-device using FLORES-200.",
     "version": "1.0.0",
     "url": "https://codeberg.org/adaster98/kloak-client-unofficial/raw/branch/main/addons/release/quick-translate/quick-translate-1.0.0.zip"
-  },
-  "damn-it-jim": {
-    "name": "Damn It Jim",
-    "description": "Temporary addon to fix the font spacing bug",
-    "version": "1.0.0",
-    "url": "https://codeberg.org/adaster98/kloak-client-unofficial/raw/branch/main/addons/release/damn-it-jim/damn-it-jim-1.0.0.zip"
   }
 }
