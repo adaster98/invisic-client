@@ -10,6 +10,27 @@ class KloakAddonManager {
   }
 
   async init() {
+    // App store data cache
+    this._storeCache = null;
+    this._storeCacheTime = 0;
+
+    // Register MutationObserver BEFORE any async/await calls so it is always
+    // active from the first synchronous tick. If both awaits below were placed
+    // first, the observer would not be registered until those IPC round-trips
+    // completed — creating a race condition where opening the settings dialog
+    // during that window causes the "Addons" button to never appear.
+    this._settingsObserver = new MutationObserver(() => {
+      this.checkForSettingsMenu();
+    });
+    this._settingsObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    // Fallback: if the settings dialog was already open before this observer
+    // was registered, inject the button now.
+    this.checkForSettingsMenu();
+
     try {
       if (window.electronAPI && window.electronAPI.getAddonStates) {
         this.states = await window.electronAPI.getAddonStates();
@@ -23,7 +44,6 @@ class KloakAddonManager {
       this.states = {};
       this.localVersions = {};
     }
-    setInterval(() => this.checkForSettingsMenu(), 500);
   }
 
   registerAddon(addon) {
@@ -46,6 +66,7 @@ class KloakAddonManager {
   }
 
   checkForSettingsMenu() {
+    // Scan globally for the logout button (same approach that worked originally)
     const buttons = Array.from(document.querySelectorAll("button"));
     const logOutBtn = buttons.find(
       (b) =>
@@ -70,8 +91,6 @@ class KloakAddonManager {
       "w-full flex items-center gap-2.5 text-sm font-medium px-3 py-2 rounded-md transition-colors text-muted-foreground hover:bg-secondary/60 hover:text-foreground";
     addonBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plug w-4 h-4"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/></svg>Addons`;
 
-    nav.insertBefore(addonBtn, logOutBtn);
-
     let settingsModal = nav.closest('[role="dialog"]') || document.body;
     if (window.getComputedStyle(settingsModal).position === "static")
       settingsModal.style.position = "relative";
@@ -80,6 +99,14 @@ class KloakAddonManager {
       const newPane = document.createElement("div");
       newPane.id = "kloak-addon-pane";
       settingsModal.appendChild(newPane);
+    }
+
+    // Insert before the divider (if present), otherwise before logout
+    const divider = nav.querySelector('[role="none"]');
+    if (divider) {
+      nav.insertBefore(addonBtn, divider);
+    } else {
+      nav.insertBefore(addonBtn, logOutBtn);
     }
 
     addonBtn.addEventListener("click", (e) => {
@@ -335,9 +362,15 @@ class KloakAddonManager {
     content.innerHTML = `<p class="store-loading-msg">Connecting to Codeberg repository...</p>`;
 
     try {
-      const storeResponse = await window.electronAPI.fetchStoreData();
-      if (!storeResponse.success) throw new Error(storeResponse.error);
-      const storeData = storeResponse.data;
+      // Use cached store data if fresh (5 min TTL)
+      const now = Date.now();
+      if (!this._storeCache || now - this._storeCacheTime > 300000) {
+        const storeResponse = await window.electronAPI.fetchStoreData();
+        if (!storeResponse.success) throw new Error(storeResponse.error);
+        this._storeCache = storeResponse.data;
+        this._storeCacheTime = now;
+      }
+      const storeData = this._storeCache;
       let localVersions = await window.electronAPI.getLocalVersions();
 
       let html = "";

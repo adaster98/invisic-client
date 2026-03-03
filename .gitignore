@@ -26,5 +26,4 @@ client/test-cache/Xenova/nllb-200-distilled-600M/onnx/decoder_model_merged_quant
 client/test-cache/Xenova/nllb-200-distilled-600M/onnx/encoder_model_quantized.onnx
 CLAUDE.md
 kloak-src/
-NATIVE_FUNCTIONS.md
-.claude/
+CSNF.md
