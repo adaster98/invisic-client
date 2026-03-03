@@ -1,27 +1,22 @@
 (() => {
   const ADDON_ID = "quick-react";
-  const SUPABASE_URL = "https://foquucurnwpqcvgqukpz.supabase.co";
-  const STORAGE_BASE = `${SUPABASE_URL}/storage/v1/object/public/server-emojis`;
   const MAINTENANCE_INTERVAL_MS = 60_000;
-  const SERVER_POLL_INTERVAL_MS = 2_000;
   const MAX_DISPLAY_EMOJIS = 3;
 
   let config = {
     memoryDurationDays: 7,
     emojis: {},
-    // Emoji data format:
-    // ":name:": { serverID: "uuid", serverName: "name", date: "date", count: 0, emojiID: "uuid", filePath: "path" }
   };
 
   let api = null;
-  let originalFetch = null;
   let hoverHandler = null;
   let maintenanceTimer = null;
-  let serverPollTimer = null;
   let lastKnownServerID = null;
-  let pendingEmojiRequests = new Set(); // Track request origin
-  let emojiImageCache = new Map(); // Emoji image cache
-  let recentEmojiMetadata = new Map(); // :name: -> { serverID, emojiID, filePath } from sniffed URLs
+  let emojiImageCache = new Map();
+  let recentEmojiMetadata = new Map();
+  let reactionAddedHandler = null;
+  let serverChangeHandler = null;
+  let emojisLoadedHandler = null;
 
   // Helpers
 
@@ -249,56 +244,20 @@
     }
   };
 
-  // Server emoji metadata
+  // Server emoji metadata — uses centralized API
   const fetchServerEmojis = async (serverID) => {
-    if (!api || !api.apiKey || !api.authToken) {
-      log("Cannot fetch server emojis: missing credentials");
+    if (!api || !api.isReady) {
+      log("Cannot fetch server emojis: API not ready");
       return;
     }
 
-    const url = `${SUPABASE_URL}/rest/v1/server_emojis?select=id%2Cname%2Cfile_path&server_id=eq.${serverID}&order=created_at.asc`;
-
-    // Track request origin
-    const requestID = `qr-${Date.now()}`;
-    pendingEmojiRequests.add(requestID);
-
     try {
       log(`Fetching server emojis for ${serverID}`);
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          apikey: api.apiKey,
-          Authorization: api.authToken,
-          "X-Key-Hash": api.xHash,
-          "X-QR-Request": requestID,
-        },
-      });
+      const emojiList = await api.emojis.getForServer(serverID);
 
-      pendingEmojiRequests.delete(requestID);
-
-      if (!response.ok) {
-        log(`Server emojis fetch failed: ${response.status}`);
-        return;
-      }
-
-      const emojiList = await response.json();
-      if (!Array.isArray(emojiList)) {
-        log("Server emojis response was not an array, ignoring");
-        return;
-      }
+      if (!Array.isArray(emojiList) || emojiList.length === 0) return;
 
       log(`Got ${emojiList.length} emojis from server ${serverID}`);
-
-      // Build a lookup: name -> { id, file_path }
-      const serverEmojiMap = new Map();
-      emojiList.forEach((e) => {
-        if (e.name && e.id && e.file_path) {
-          serverEmojiMap.set(`:${e.name}:`, {
-            id: e.id,
-            filePath: e.file_path,
-          });
-        }
-      });
 
       // Update config records using metadata list
       let updated = false;
@@ -306,10 +265,8 @@
         const emojiName = `:${e.name}:`;
         const metadata = { serverID, emojiID: e.id, filePath: e.file_path };
 
-        // Use our reconciliation helper to fix any misattributed instances of this emoji
         reconcileMetadata(emojiName, metadata);
 
-        // Update current server record specifically
         const currentKey = `${serverID}|${emojiName}`;
         if (config.emojis[currentKey]) {
           config.emojis[currentKey].emojiID = e.id;
@@ -322,23 +279,24 @@
       // Ensure images are in browser cache
       await preloadEmojiImages(serverID, emojiList);
     } catch (e) {
-      pendingEmojiRequests.delete(requestID);
       log(`Error fetching server emojis: ${e.message}`);
     }
   };
 
-  // Fetch emoji images
+  // Fetch emoji images — use originalFetch from the API to avoid interception loops
   const preloadEmojiImages = async (serverID, emojiList) => {
+    const rawFetch = api?.originalFetch || window.fetch;
     for (const emoji of emojiList) {
-      if (!emoji.file_path) continue;
+      if (!emoji.file_path && !emoji.url) continue;
 
-      // Use server-scoped cache key to avoid collisions for same-named emojis
       const cacheKey = `${serverID}|${emoji.name}`;
       if (emojiImageCache.has(cacheKey)) continue;
 
-      const imageUrl = `${STORAGE_BASE}/${emoji.file_path}`;
+      const imageUrl = emoji.url || (api ? api.emojis.getImageUrl(emoji.file_path) : null);
+      if (!imageUrl) continue;
+
       try {
-        const resp = await fetch(imageUrl);
+        const resp = await rawFetch(imageUrl);
         if (resp.ok) {
           const blob = await resp.blob();
           const blobUrl = URL.createObjectURL(blob);
@@ -352,6 +310,7 @@
 
   // Ensure top emoji images are cached
   const ensureTopEmojiImages = async () => {
+    const rawFetch = api?.originalFetch || window.fetch;
     const topEmojis = getTopEmojis();
     for (const emoji of topEmojis) {
       if (!emoji.filePath || !emoji.serverID) continue;
@@ -361,11 +320,12 @@
 
       if (emojiImageCache.has(cacheKey)) continue;
 
-      // Fetch directly from storage
-      const imageUrl = `${STORAGE_BASE}/${emoji.filePath}`;
+      const imageUrl = api ? api.emojis.getImageUrl(emoji.filePath) : null;
+      if (!imageUrl) continue;
+
       try {
         log(`Fetching missing image for ${emoji.name} from storage`);
-        const resp = await fetch(imageUrl);
+        const resp = await rawFetch(imageUrl);
         if (resp.ok) {
           const blob = await resp.blob();
           const blobUrl = URL.createObjectURL(blob);
@@ -412,89 +372,58 @@
     if (changed) saveConfig();
   };
 
-  // Fetch interceptor
-  const setupInterceptor = () => {
-    if (!originalFetch) originalFetch = window.fetch;
-    const self_originalFetch = originalFetch;
-    log(`Setup interceptor`);
+  // Event-based reaction tracking (replaces fetch interceptor)
+  const setupEventListeners = () => {
+    if (!api || !api.events) return;
 
-    window.fetch = async function (...args) {
-      const resource = args[0];
-      const url =
-        typeof resource === "string" ? resource : resource ? resource.url : "";
-      const options = args[1] || {};
-
-      const isAddReaction =
-        url.includes("/rpc/add_reaction") ||
-        url.includes("/rpc/add_dm_reaction");
-
-      // Check request origin
-      const isOurEmojiRequest =
-        url.includes("/rest/v1/server_emojis") &&
-        options.headers &&
-        options.headers["X-QR-Request"] &&
-        pendingEmojiRequests.has(options.headers["X-QR-Request"]);
-
-      // Clean headers
-      if (isOurEmojiRequest && options.headers) {
-        delete options.headers["X-QR-Request"];
-      }
-
-      const response = await self_originalFetch.apply(this, args);
-
-      // Metadata sniffing for cross-server emojis used via native picker
-      if (
-        url.includes(`${SUPABASE_URL}/storage/v1/object/public/server-emojis/`)
-      ) {
-        const parts = url.split("/server-emojis/")[1];
-        if (parts) {
-          // Format: serverID/name-emojiID.png
-          const match = parts.match(/^([^/]+)\/(.+)-([a-f0-9-]{36})\.[a-z]+$/);
-          if (match) {
-            const [_, sID, eName, eID] = match;
-            const emojiName = `:${eName}:`;
-            const metadata = {
-              serverID: sID,
-              emojiID: eID,
-              filePath: parts,
-            };
-            recentEmojiMetadata.set(emojiName, metadata);
-            // Proactively fix any records that might be misattributed
-            reconcileMetadata(emojiName, metadata);
-          }
-        }
-      }
-
-      // Process responses
-      if (isAddReaction) {
-        const rpcName = url.includes("add_dm_reaction")
-          ? "add_dm_reaction"
-          : "add_reaction";
-        log(
-          `[DEBUG] ${rpcName} detected! response.ok=${response.ok}, has body=${!!options.body}`,
-        );
-        if (response.ok) {
-          try {
-            const body = options.body ? JSON.parse(options.body) : null;
-            log(`[DEBUG] ${rpcName} body: ${JSON.stringify(body)}`);
-            if (body && body._emoji) {
-              recordEmoji(body._emoji);
-            }
-          } catch (e) {
-            log(`[DEBUG] ${rpcName} body parse error: ${e.message}`);
-          }
-        }
-      }
-
-      return response;
+    // Track reactions added via any means (native picker or our own buttons)
+    reactionAddedHandler = ({ emoji }) => {
+      if (emoji) recordEmoji(emoji);
     };
+    api.events.on("reactionAdded", reactionAddedHandler);
+
+    // React to server switches (replaces 2-second polling)
+    serverChangeHandler = ({ serverID }) => {
+      if (serverID && serverID !== lastKnownServerID) {
+        lastKnownServerID = serverID;
+        log(`Server switch detected: ${serverID}`);
+        fetchServerEmojis(serverID);
+      }
+    };
+    api.events.on("serverChange", serverChangeHandler);
+
+    // React to emoji cache updates from centralized API
+    emojisLoadedHandler = ({ serverId, emojis }) => {
+      if (!Array.isArray(emojis)) return;
+      let updated = false;
+      emojis.forEach((e) => {
+        const emojiName = `:${e.name}:`;
+        const metadata = { serverID: serverId, emojiID: e.id, filePath: e.file_path };
+        recentEmojiMetadata.set(emojiName, metadata);
+
+        const currentKey = `${serverId}|${emojiName}`;
+        if (config.emojis[currentKey]) {
+          config.emojis[currentKey].emojiID = e.id;
+          config.emojis[currentKey].filePath = e.file_path;
+          updated = true;
+        }
+      });
+      if (updated) saveConfig();
+    };
+    api.events.on("serverEmojisLoaded", emojisLoadedHandler);
+
+    log("Event listeners active");
   };
 
-  const removeInterceptor = () => {
-    if (originalFetch) {
-      window.fetch = originalFetch;
-      originalFetch = null;
+  const removeEventListeners = () => {
+    if (api && api.events) {
+      if (reactionAddedHandler) api.events.off("reactionAdded", reactionAddedHandler);
+      if (serverChangeHandler) api.events.off("serverChange", serverChangeHandler);
+      if (emojisLoadedHandler) api.events.off("serverEmojisLoaded", emojisLoadedHandler);
     }
+    reactionAddedHandler = null;
+    serverChangeHandler = null;
+    emojisLoadedHandler = null;
   };
 
   // Sorted top emojis
@@ -509,35 +438,18 @@
       }));
   };
 
-  // Send reaction
+  // Send reaction via centralized API
   const sendReaction = async (messageId, emojiName, emojiRecord) => {
-    if (!api || !api.apiKey || !api.authToken) {
-      log("Cannot send reaction: missing credentials");
+    if (!api || !api.isReady) {
+      log("Cannot send reaction: API not ready");
       return;
     }
 
     const emojiString = buildEmojiString(emojiName, emojiRecord);
-    const isDM = api && api.currentDMStatus;
-    const rpcName = isDM ? "add_dm_reaction" : "add_reaction";
-    log(
-      `Sending reaction ${emojiString} on message ${messageId} (via ${rpcName})`,
-    );
+    log(`Sending reaction ${emojiString} on message ${messageId}`);
 
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpcName}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: api.apiKey,
-          Authorization: api.authToken,
-          "X-Key-Hash": api.xHash,
-        },
-        body: JSON.stringify({
-          _message_id: messageId,
-          _user_id: api.userID,
-          _emoji: emojiString,
-        }),
-      });
+      await api.messages.addReaction(messageId, emojiString);
     } catch (e) {
       log(`Failed to send reaction: ${e.message}`);
     }
@@ -620,22 +532,10 @@
     }
   };
 
-  // Server switch polling
-  const pollServerSwitch = () => {
-    if (!api) return;
-    const currentID = api.currentServerID;
-    if (currentID && currentID !== lastKnownServerID) {
-      lastKnownServerID = currentID;
-      log(`Server switch detected: ${api.currentServerName} (${currentID})`);
-      fetchServerEmojis(currentID);
-    }
-  };
-
   // Addon lifecycle
   const startAddon = async () => {
     await loadConfig();
-    setupInterceptor();
-    log("Interceptor active");
+    setupEventListeners();
 
     // Ensure images for tracked emojis are in memory (covers client restarts)
     await ensureTopEmojiImages();
@@ -645,9 +545,6 @@
       lastKnownServerID = api.currentServerID;
       fetchServerEmojis(api.currentServerID);
     }
-
-    // Poll for server switches
-    serverPollTimer = setInterval(pollServerSwitch, SERVER_POLL_INTERVAL_MS);
 
     // Periodic maintenance (also re-checks images)
     runMaintenance();
@@ -670,8 +567,7 @@
   };
 
   const stopAddon = () => {
-    removeInterceptor();
-    log("Interceptor removed");
+    removeEventListeners();
 
     if (hoverHandler) {
       document.removeEventListener("mouseover", hoverHandler);
@@ -680,10 +576,6 @@
     if (maintenanceTimer) {
       clearInterval(maintenanceTimer);
       maintenanceTimer = null;
-    }
-    if (serverPollTimer) {
-      clearInterval(serverPollTimer);
-      serverPollTimer = null;
     }
 
     document.querySelectorAll(".quick-moji-btn").forEach((el) => el.remove());

@@ -60,16 +60,18 @@
 
   const genId = () => crypto.randomUUID();
 
-  // ── Fetch intercept: capture DM conversations ──
-  const originalFetch = window.fetch;
+  // ── DM conversation data handling ──
   const mergeConversations = (data) => {
-    if (!Array.isArray(data)) return;
+    // Accept either { conversations: [...] } or raw array
+    const convArray = Array.isArray(data)
+      ? data
+      : data?.conversations || [];
+    if (!Array.isArray(convArray)) return;
     const myUserId = window.KloakAddonAPI ? window.KloakAddonAPI.userID : null;
 
-    data.forEach((conv) => {
+    convArray.forEach((conv) => {
       if (conv.conversation && conv.conversation.id) {
         dmConversations.set(conv.conversation.id, conv);
-        // Map other participants to this convId for faster matching
         if (conv.participants) {
           conv.participants.forEach((p) => {
             if (p.user_id && p.user_id !== myUserId) {
@@ -85,44 +87,21 @@
     }
   };
 
-  const patchedFetch = async function (...args) {
-    const response = await originalFetch.apply(this, args);
-    try {
-      const url = typeof args[0] === "string" ? args[0] : args[0]?.url;
-      if (url && url.includes("get_user_dm_conversations")) {
-        const clone = response.clone();
-        const data = await clone.json();
-        mergeConversations(data);
-      }
-    } catch (_) {
-      /* ignore parse errors */
-    }
-    return response;
-  };
-
-  // ── Bootstrap: Fetch DM conversations manually ──
+  // ── Bootstrap: Fetch DM conversations via centralized API ──
   const fetchConversations = async () => {
     const api = window.KloakAddonAPI;
-    if (!api || !api.authToken || !api.apiKey || !api.xHash) return;
+    if (!api || !api.isReady) return;
 
     try {
-      const res = await originalFetch(
-        "https://foquucurnwpqcvgqukpz.supabase.co/rest/v1/rpc/get_user_dm_conversations",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: api.authToken,
-            apiKey: api.apiKey,
-            "X-Key-Hash": api.xHash,
-          },
-          body: JSON.stringify({ _user_id: api.userID }),
-        },
-      );
-      if (res.ok) {
-        const data = await res.json();
-        mergeConversations(data);
+      // Check if the centralized API already has cached conversations
+      const cached = api.conversations.getAll();
+      if (cached.length > 0) {
+        mergeConversations(cached);
       }
+
+      // Also fetch fresh data
+      const data = await api.conversations.fetch();
+      mergeConversations(data);
     } catch (e) {
       console.error(`[${ADDON_ID}] Bootstrap fetch failed:`, e);
     }
@@ -1080,9 +1059,9 @@
     // Remove injected elements
     fullCleanupDOM();
 
-    // Restore fetch
-    if (window.fetch === patchedFetch) {
-      window.fetch = originalFetch;
+    // Unsubscribe from centralized events
+    if (window.KloakAddonAPI?.events) {
+      window.KloakAddonAPI.events.off("dmConversationsLoaded", mergeConversations);
     }
   };
 
@@ -1099,7 +1078,8 @@
           if (!isEnabled) return;
           await loadConfig();
           injectStyles();
-          window.fetch = patchedFetch;
+          // Listen for future conversation loads via centralized events
+          window.KloakAddonAPI.events.on("dmConversationsLoaded", mergeConversations);
           await fetchConversations();
           setupObserver();
           setupSidebarWatcher();
@@ -1107,7 +1087,6 @@
       } else {
         await loadConfig();
         injectStyles();
-        window.fetch = patchedFetch;
         setupObserver();
         setupSidebarWatcher();
       }

@@ -18,7 +18,6 @@
       "kloak-injected-user-id text-[10px] text-muted-foreground/40 font-mono ml-2 mr-1 select-text transition-colors hover:text-muted-foreground/80",
   };
 
-  const SUPABASE_URL = "https://foquucurnwpqcvgqukpz.supabase.co";
   const MESSAGE_SELECTOR = 'div[id^="message-"], div[id^="dm-message-"]';
 
   const extractMsgId = (id) =>
@@ -27,68 +26,50 @@
   // Global State & Caches
   let domObserver = null;
   let rightClickObserver = null;
-  let originalFetch = null;
+  let messagesLoadedHandler = null;
 
   let lastRightClickedMessageId = null;
 
   const msgToUserMap = new Map();
   const userProfileCache = new Map();
 
-  // Network Interceptor
-  const setupInterceptor = () => {
-    if (!originalFetch) originalFetch = window.fetch;
+  // Use the centralized event system instead of fetch interception
+  const setupEventListener = () => {
+    const api = window.KloakAddonAPI;
+    if (!api || !api.events) return;
 
-    window.fetch = async (...args) => {
-      const resource = args[0];
-      const url =
-        typeof resource === "string" ? resource : resource ? resource.url : "";
+    messagesLoadedHandler = ({ messages }) => {
+      if (!Array.isArray(messages)) return;
+      messages.forEach((msg) => {
+        const uId = msg.user_id || msg.sender_id;
+        const uProfile = msg.user || msg.sender;
 
-      const response = await originalFetch(...args);
+        if (msg.id && uId) {
+          msgToUserMap.set(String(msg.id), String(uId));
+        }
 
-      if (
-        url.includes("/rpc/get_channel_messages_secure") ||
-        url.includes("/rpc/get_dm_messages")
-      ) {
-        response
-          .clone()
-          .json()
-          .then((data) => {
-            if (Array.isArray(data)) {
-              data.forEach((msg) => {
-                const uId = msg.user_id || msg.sender_id;
-                const uProfile = msg.user || msg.sender;
+        if (uProfile && uProfile.id) {
+          userProfileCache.set(String(uProfile.id), uProfile);
+        }
+      });
 
-                if (msg.id && uId) {
-                  msgToUserMap.set(String(msg.id), String(uId));
-                }
-
-                if (uProfile && uProfile.id) {
-                  userProfileCache.set(String(uProfile.id), uProfile);
-                }
-              });
-
-              if (config.showIdsInChat) {
-                setTimeout(
-                  () =>
-                    document
-                      .querySelectorAll(MESSAGE_SELECTOR)
-                      .forEach(processMessage),
-                  50,
-                );
-              }
-            }
-          })
-          .catch(() => {});
+      if (config.showIdsInChat) {
+        setTimeout(
+          () =>
+            document
+              .querySelectorAll(MESSAGE_SELECTOR)
+              .forEach(processMessage),
+          50,
+        );
       }
-
-      return response;
     };
+    api.events.on("messagesLoaded", messagesLoadedHandler);
   };
 
-  const removeInterceptor = () => {
-    if (originalFetch) {
-      window.fetch = originalFetch;
-      originalFetch = null;
+  const removeEventListener = () => {
+    if (messagesLoadedHandler && window.KloakAddonAPI?.events) {
+      window.KloakAddonAPI.events.off("messagesLoaded", messagesLoadedHandler);
+      messagesLoadedHandler = null;
     }
   };
 
@@ -334,7 +315,7 @@
         "A powerful multitool for developers. View hidden user info and copy raw database IDs directly from the chat.",
 
       onEnable: () => {
-        setupInterceptor();
+        setupEventListener();
 
         setTimeout(
           () =>
@@ -421,39 +402,23 @@
                         }
 
                         const api = window.KloakAddonAPI;
-                        if (
-                          !api ||
-                          !api.userID ||
-                          !api.apiKey ||
-                          !api.authToken ||
-                          !api.xHash
-                        ) {
+                        if (!api || !api.isReady) {
                           showDeveloperModal(currentMsgId, {
                             id: targetUserId,
-                            bio: `RPC Failed: Missing credentials.\nAPI Ready: ${!!api}\nHas User ID: ${!!api?.userID}\nHas API Key: ${!!api?.apiKey}`,
+                            bio: `RPC Failed: API not ready.`,
                           });
                           return;
                         }
 
                         try {
-                          const res = await fetch(
-                            `${SUPABASE_URL}/rest/v1/rpc/get_user_profile_secure`,
+                          const rawData = await api.rpc(
+                            "get_user_profile_secure",
                             {
-                              method: "POST",
-                              headers: {
-                                "Content-Type": "application/json",
-                                "X-Key-Hash": api.xHash,
-                                apikey: api.apiKey,
-                                Authorization: api.authToken,
-                              },
-                              body: JSON.stringify({
-                                _target_user_id: targetUserId,
-                                _requesting_user_id: api.userID,
-                              }),
+                              _target_user_id: targetUserId,
+                              _requesting_user_id: api.userID,
                             },
                           );
 
-                          const rawData = await res.json();
                           const profile = Array.isArray(rawData)
                             ? rawData[0]
                             : rawData;
@@ -489,7 +454,7 @@
       },
 
       onDisable: () => {
-        removeInterceptor();
+        removeEventListener();
         if (domObserver) domObserver.disconnect();
         if (rightClickObserver) rightClickObserver.disconnect();
         document.removeEventListener("contextmenu", handleContextMenu, true);

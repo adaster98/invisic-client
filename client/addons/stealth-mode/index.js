@@ -1,58 +1,22 @@
-(async () => {
+(function () {
   const ADDON_ID = "stealth-mode";
   let config = {};
-  let injectTimer = null;
+  let observer = null;
 
-  try {
-    if (window.electronAPI && window.electronAPI.getAddonConfig) {
-      config = await window.electronAPI.getAddonConfig(ADDON_ID);
-    }
-  } catch (e) {}
-
-  if (config.stealthEnabled === undefined) config.stealthEnabled = false;
-
-  // Interceptors
-
-  // WebSocket Interceptor
-  const originalSend = WebSocket.prototype.send;
-  WebSocket.prototype.send = function (data) {
-    if (config.stealthEnabled) {
-      try {
-        let isTypingSignal = false;
-        if (typeof data === "string" && data.toLowerCase().includes("typing")) {
-          isTypingSignal = true;
-        } else if (data instanceof ArrayBuffer || data instanceof Blob) {
-          const decoder = new TextDecoder();
-          const text = decoder.decode(
-            data instanceof Blob ? data.arrayBuffer() : data,
-          );
-          if (text.toLowerCase().includes("typing")) isTypingSignal = true;
-        }
-
-        if (isTypingSignal) return; // Drop packet
-      } catch (err) {}
-    }
-    return originalSend.apply(this, arguments);
-  };
-
-  // Fetch Interceptor
-  const { fetch: originalFetch } = window;
-  window.fetch = async (...args) => {
-    if (config.stealthEnabled) {
-      const [resource, options] = args;
-      const url = typeof resource === "string" ? resource : resource.url;
-
-      if (
-        url.includes("typing") ||
-        (options?.body && options.body.includes("typing"))
-      ) {
-        return new Response(null, { status: 204 }); // Return fake success
+  const loadConfig = async () => {
+    try {
+      if (window.electronAPI && window.electronAPI.getAddonConfig) {
+        config = await window.electronAPI.getAddonConfig(ADDON_ID);
       }
-    }
-    return originalFetch(...args);
+    } catch (e) {}
+    if (config.stealthEnabled === undefined) config.stealthEnabled = false;
   };
 
-  // Helper functions
+  const saveConfig = () => {
+    if (window.electronAPI && window.electronAPI.saveAddonConfig) {
+      window.electronAPI.saveAddonConfig({ addonId: ADDON_ID, data: config });
+    }
+  };
 
   const updateButtonIcon = (btn) => {
     const eyeOpen = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eye"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0z"/><circle cx="12" cy="12" r="3"/></svg>`;
@@ -62,6 +26,12 @@
     btn.style.color = config.stealthEnabled
       ? "var(--kloak-accent-destructive)"
       : "";
+  };
+
+  const syncSuppressFlag = () => {
+    if (window.KloakAddonAPI) {
+      window.KloakAddonAPI.presence.suppressTyping = config.stealthEnabled;
+    }
   };
 
   const injectStealthButton = () => {
@@ -81,33 +51,52 @@
       e.preventDefault();
       config.stealthEnabled = !config.stealthEnabled;
       updateButtonIcon(stealthBtn);
-
-      if (window.electronAPI.saveAddonConfig) {
-        window.electronAPI.saveAddonConfig({ addonId: ADDON_ID, data: config });
-      }
+      syncSuppressFlag();
+      saveConfig();
     });
 
     controls.insertBefore(stealthBtn, controls.firstChild);
   };
 
-  // addon registration
+  // Use MutationObserver instead of setInterval to detect when to inject the button
+  const startObserver = () => {
+    injectStealthButton();
+    observer = new MutationObserver(() => {
+      if (!document.getElementById("kloak-stealth-btn")) {
+        injectStealthButton();
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  };
 
-  window.KloakAddons.registerAddon({
-    id: ADDON_ID,
-    name: "Stealth Mode",
-    description:
-      'Blocks the "User is typing..." indicator from being sent to others.',
+  const stopObserver = () => {
+    if (observer) {
+      observer.disconnect();
+      observer = null;
+    }
+  };
 
-    onEnable: () => {
-      injectStealthButton();
-      injectTimer = setInterval(injectStealthButton, 1000);
-    },
+  // Load config before registering (non-blocking)
+  loadConfig().then(() => {
+    window.KloakAddons.registerAddon({
+      id: ADDON_ID,
+      name: "Stealth Mode",
+      description:
+        'Blocks the "User is typing..." indicator from being sent to others.',
 
-    onDisable: () => {
-      config.stealthEnabled = false;
-      if (injectTimer) clearInterval(injectTimer);
-      const btn = document.getElementById("kloak-stealth-btn");
-      if (btn) btn.remove();
-    },
+      onEnable: () => {
+        syncSuppressFlag();
+        startObserver();
+      },
+
+      onDisable: () => {
+        config.stealthEnabled = false;
+        syncSuppressFlag();
+        saveConfig();
+        stopObserver();
+        const btn = document.getElementById("kloak-stealth-btn");
+        if (btn) btn.remove();
+      },
+    });
   });
 })();

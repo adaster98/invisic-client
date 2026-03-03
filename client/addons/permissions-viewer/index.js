@@ -3,7 +3,6 @@
 
   // State
   let menuObserver = null;
-  let pollInterval = null;
 
   // Permission Configuration
   const CATEGORIES = [
@@ -222,33 +221,7 @@
     },
   ];
 
-  const callRpc = async (rpcName, body) => {
-    const api = window.KloakAddonAPI;
-    if (!api?.authToken || !api?.apiKey || !api?.xHash) {
-      throw new Error(`Kloak API not ready — missing credentials`);
-    }
-
-    const res = await fetch(
-      `https://foquucurnwpqcvgqukpz.supabase.co/rest/v1/rpc/${rpcName}`,
-      {
-        method: "POST",
-        headers: {
-          apikey: api.apiKey,
-          Authorization: api.authToken,
-          "Content-Type": "application/json",
-          "X-Key-Hash": api.xHash,
-        },
-        body: JSON.stringify(body),
-      },
-    );
-
-    if (!res.ok) {
-      const errBody = await res.text();
-      throw new Error(`RPC "${rpcName}" failed (${res.status}):\n${errBody}`);
-    }
-
-    return await res.json();
-  };
+  const callRpc = (rpcName, body) => window.KloakAddonAPI.rpc(rpcName, body);
 
   const escapeHtml = (str) => {
     if (!str) return "";
@@ -572,17 +545,10 @@
       attributes: true,
       attributeFilter: ["data-state"],
     });
-    pollInterval = setInterval(() => {
-      const open = document.querySelectorAll(
-        '[role="menu"][data-state="open"]',
-      );
-      open.forEach(injectToMenu);
-    }, 2000);
   };
 
   const stopInjection = () => {
     if (menuObserver) menuObserver.disconnect();
-    if (pollInterval) clearInterval(pollInterval);
     document
       .querySelectorAll(`[data-addon="${ADDON_ID}"]`)
       .forEach((el) => el.remove());
