@@ -2,10 +2,13 @@
 
 A highly customizable desktop client for Kloak.app, free and open source. <br>
 
-![kloak-client](assets/images/kloak-client.png) <br>
+![invisic-client](assets/images/invisic-client.png) <br>
 
-Now with an addon manager! Choose from many pre-made addons or create your own!
-![kloak-addons](assets/images/kloak-addons.png)
+#### - Built in UI and Performance fixes!<br>
+
+#### - Keep your friends organised with DM folders!<br>
+
+#### - Choose from over 5 additional addons to enhance your experience <br>
 
 ## Installation:
 
