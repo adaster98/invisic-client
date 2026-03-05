@@ -4,9 +4,9 @@
  * Author: Aster
  */
 
-/* --- 1. Core Variables (Monochrome Light Mode) --- */
+/* Core Variables */
 :root, .dark, [data-theme="dark"], body {
-    /* Main Backgrounds (Pure white & off-white) */
+    /* Backgrounds */
     --background: 0 0% 100% !important;
     --layout-chat: 0 0% 100% !important;
     --layout-sidebar: 0 0% 96% !important;
@@ -19,27 +19,26 @@
     --secondary: 0 0% 90% !important;
     --muted: 0 0% 94% !important;
 
-    /* Outlines & Dividers */
+    /* Borders & Inputs */
     --border: 0 0% 85% !important;
     --input: 0 0% 85% !important;
     --ring: 0 0% 20% !important;
 
-    /* Typography (Sharp dark gray/black text) */
+    /* Text */
     --foreground: 0 0% 15% !important;
     --card-foreground: 0 0% 15% !important;
     --popover-foreground: 0 0% 15% !important;
     --secondary-foreground: 0 0% 15% !important;
     --muted-foreground: 0 0% 45% !important;
 
-    /* Accents & Buttons (High contrast black/dark gray) */
+    /* Primary & Accent */
     --primary: 0 0% 20% !important;
     --primary-foreground: 0 0% 100% !important;
     --accent: 0 0% 90% !important;
     --accent-foreground: 0 0% 15% !important;
-
 }
 
-/* --- 2. Layout Overrides --- */
+/* Layout Overrides */
 .bg-layout-sidebar, .bg-layout-members {
     background-color: hsl(0, 0%, 96%) !important;
 }
@@ -59,6 +58,7 @@
     color: hsl(0, 0%, 15%) !important;
 }
 
+/* Resize Handles */
 [data-resize-handle]::after {
     background-color: hsl(0, 0%, 85%) !important;
 }
@@ -67,22 +67,21 @@
     background-color: hsl(0, 0%, 20%, 0.3) !important;
 }
 
-/* --- 3. Native Kloak Slider (Radix) --- */
-/* Track background */
+/* Slider */
 span[data-orientation="horizontal"]:not([dir]):not([role]) {
     background-color: hsl(var(--secondary)) !important;
 }
-/* Range fill — has inline gradient style, needs !important to override */
 span[data-orientation="horizontal"]:not([dir]):not([role]) > span[data-orientation="horizontal"] {
     background: hsl(var(--primary)) !important;
 }
-/* Thumb */
+
+/* Slider Thumb */
 span[role="slider"][data-orientation="horizontal"] {
     background-color: hsl(var(--background)) !important;
     border-color: hsl(var(--primary)) !important;
 }
 
-/* --- 5. Scrollbars --- */
+/* Scrollbars */
 ::-webkit-scrollbar-thumb {
     background-color: hsl(0, 0%, 80%) !important;
     border-radius: 10px;

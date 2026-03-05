@@ -1,40 +1,44 @@
 /**
  * Theme Name: Sakura Pink (Light Mode)
  * Description: Bright cherry blossom theme based on the Sakura palette.
- * Author: Developer Toolkit
+ * Author: Aster
  */
 
-/* --- 1. Core Variables (Light Mode Inversion) --- */
+/* Core Variables */
 :root, .dark, [data-theme="dark"], body {
+    /* Backgrounds */
     --background: 330 67% 96% !important;
     --layout-chat: 330 67% 96% !important;
     --layout-sidebar: 331 62% 94% !important;
     --layout-members: 331 62% 94% !important;
     --layout-sidebar-secondary: 331 62% 94% !important;
 
+    /* Surfaces & Containers */
     --card: 330 67% 96% !important;
     --popover: 330 67% 96% !important;
     --secondary: 337 72% 88% !important;
     --muted: 338 65% 85% !important;
 
+    /* Borders & Inputs */
     --border: 338 61% 78% !important;
     --input: 338 61% 78% !important;
     --ring: 341 60% 58% !important;
 
+    /* Text */
     --foreground: 338 46% 20% !important;
     --card-foreground: 338 46% 20% !important;
     --popover-foreground: 338 46% 20% !important;
     --secondary-foreground: 338 46% 20% !important;
     --muted-foreground: 338 30% 45% !important;
 
+    /* Primary & Accent */
     --primary: 341 60% 58% !important;
     --primary-foreground: 0 0% 100% !important;
     --accent: 337 72% 88% !important;
     --accent-foreground: 338 46% 20% !important;
-
 }
 
-/* --- 2. Layout Overrides --- */
+/* Layout Overrides */
 .bg-layout-sidebar, .bg-layout-members {
     background-color: hsl(331, 62%, 94%) !important;
 }
@@ -54,6 +58,7 @@
     color: hsl(338, 46%, 20%) !important;
 }
 
+/* Resize Handles */
 [data-resize-handle]::after {
     background-color: hsl(338, 61%, 78%) !important;
 }
@@ -62,22 +67,21 @@
     background-color: hsl(341, 60%, 58%, 0.5) !important;
 }
 
-/* --- 3. Native Kloak Slider (Radix) --- */
-/* Track background */
+/* Slider */
 span[data-orientation="horizontal"]:not([dir]):not([role]) {
     background-color: hsl(var(--secondary)) !important;
 }
-/* Range fill — has inline gradient style, needs !important to override */
 span[data-orientation="horizontal"]:not([dir]):not([role]) > span[data-orientation="horizontal"] {
     background: hsl(var(--primary)) !important;
 }
-/* Thumb */
+
+/* Slider Thumb */
 span[role="slider"][data-orientation="horizontal"] {
     background-color: hsl(var(--background)) !important;
     border-color: hsl(var(--primary)) !important;
 }
 
-/* --- 5. Scrollbars --- */
+/* Scrollbars */
 ::-webkit-scrollbar-thumb {
     background-color: hsl(338, 61%, 78%) !important;
     border-radius: 10px;

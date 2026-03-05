@@ -1,48 +1,44 @@
 /**
- * Theme Name: Midnight Gold (AMOLED Executive)
+ * Theme Name: Invisic
  * Description: Absolute black backgrounds with dark gray skeleton and metallic gradient components.
- * Author: Aster & Gemini
+ * Author: Aster
  */
 
-/* --- 1. Core Variables --- */
+/* Core Variables */
 :root, .dark, [data-theme="dark"], body {
-    /* Main Backgrounds - Absolute Black */
+    /* Backgrounds */
     --background: 0 0% 0% !important;
     --layout-chat: 0 0% 0% !important;
     --layout-sidebar: 0 0% 0% !important;
     --layout-members: 0 0% 0% !important;
     --layout-sidebar-secondary: 0 0% 0% !important;
 
-    /* Surfaces & Containers - Full Blackout */
+    /* Surfaces & Containers */
     --card: 0 0% 0% !important;
     --popover: 0 0% 0% !important;
     --secondary: 0 0% 0% !important;
     --muted: 0 0% 0% !important;
 
-    /* Outlines & Dividers - Muted Dark Gray */
+    /* Borders & Inputs */
     --border: 0 0% 12% !important;
     --input: 0 0% 12% !important;
     --ring: 45 100% 50% !important;
 
-    /* Typography - Subtle Gold Tinting */
+    /* Text */
     --foreground: 45 20% 92% !important;
     --card-foreground: 45 20% 92% !important;
     --popover-foreground: 45 20% 92% !important;
     --secondary-foreground: 45 20% 92% !important;
     --muted-foreground: 45 10% 55% !important;
 
-    /* Accents & Buttons */
+    /* Primary & Accent */
     --primary: 45 100% 50% !important;
     --primary-foreground: 0 0% 0% !important;
     --accent: 0 0% 10% !important;
     --accent-foreground: 45 100% 60% !important;
-
 }
 
-/* --- 2. Metallic Gradient Overrides --- */
-
-/* Reusable Gradient Definition */
-/* Applied to Primary Buttons and Switches (On) */
+/* Buttons & Switches */
 .bg-primary,
 button[role="switch"][data-state="checked"],
 button[role="radio"][data-state="checked"] {
@@ -51,59 +47,70 @@ button[role="radio"][data-state="checked"] {
     box-shadow: 0 2px 10px hsla(45, 100%, 50%, 0.15) !important;
 }
 
-/* Specific Hover States */
 .bg-primary:hover,
 button[role="switch"][data-state="checked"]:hover {
     background: linear-gradient(145deg, hsl(48, 100%, 75%) 0%, hsl(45, 100%, 55%) 45%, hsl(35, 100%, 40%) 100%) !important;
 }
 
-/* Native Kloak Slider (Radix) */
-/* Track background */
+button[role="switch"][data-state="unchecked"] {
+    background-color: hsl(0, 0%, 20%) !important;
+}
+
+/* Layout Overrides */
+.bg-layout-sidebar, .bg-layout-members {
+    background-color: hsl(0, 0%, 0%) !important;
+}
+.bg-layout-chat, .bg-background {
+    background-color: hsl(0, 0%, 0%) !important;
+}
+.bg-layout-sidebar-secondary {
+    background-color: hsl(0, 0%, 0%) !important;
+}
+
+.bg-card, .bg-secondary, .bg-muted {
+    background-color: hsl(0, 0%, 0%) !important;
+}
+
+.border, .border-t, .border-b, .border-l, .border-r {
+    border-color: hsl(0, 0%, 12%) !important;
+}
+
+.bg-background\/20,
+.bg-muted\/60,
+.bg-background\/50,
+.bg-background\/70,
+.popover,
+.dropdown-menu {
+    background-color: hsl(0, 0%, 0%) !important;
+    border: 1px solid hsl(0, 0%, 15%) !important;
+    backdrop-filter: none !important;
+}
+
+/* Resize Handles */
+[data-resize-handle]::after {
+    background-color: hsl(0, 0%, 12%) !important;
+}
+[data-resize-handle]:hover,
+[data-resize-handle][data-resize-handle-state="drag"] {
+    background-color: hsl(45, 100%, 50%, 0.5) !important;
+}
+
+/* Slider */
 span[data-orientation="horizontal"]:not([dir]):not([role]) {
     background-color: hsl(0, 0%, 12%) !important;
 }
-/* Range fill — has inline gradient style, needs !important to override */
 span[data-orientation="horizontal"]:not([dir]):not([role]) > span[data-orientation="horizontal"] {
     background: linear-gradient(to right, hsl(48, 100%, 65%), hsl(45, 100%, 45%), hsl(35, 100%, 30%)) !important;
 }
-/* Thumb */
+
+/* Slider Thumb */
 span[role="slider"][data-orientation="horizontal"] {
     background-color: hsl(0, 0%, 0%) !important;
     border-color: hsl(45, 100%, 50%) !important;
     box-shadow: none !important;
 }
 
-/* Native Switch (Radix) — off-state uses bg-input; boost visibility on pure black */
-button[role="switch"][data-state="unchecked"] {
-    background-color: hsl(0, 0%, 20%) !important;
-}
-
-/* --- 3. Layout & Skeleton --- */
-
-.bg-layout-sidebar,
-.bg-layout-members,
-.bg-layout-sidebar-secondary,
-.bg-layout-chat,
-.bg-background,
-.bg-card,
-.bg-secondary,
-.bg-muted {
-    background-color: hsl(0, 0%, 0%) !important;
-}
-
-/* Dark Gray Borders */
-.border, .border-t, .border-b, .border-l, .border-r {
-    border-color: hsl(0, 0%, 12%) !important;
-}
-
-/* Popovers & Menus */
-.bg-background\/20, .bg-muted\/60, .bg-background\/50, .bg-background\/70, .popover, .dropdown-menu {
-    background-color: hsl(0, 0%, 0%) !important;
-    border: 1px solid hsl(0, 0%, 15%) !important;
-    backdrop-filter: none !important;
-}
-
-/* --- 4. Scrollbars --- */
+/* Scrollbars */
 ::-webkit-scrollbar-thumb {
     background-color: hsl(0, 0%, 15%) !important;
     border: 2px solid hsl(0, 0%, 0%);
@@ -111,4 +118,7 @@ button[role="switch"][data-state="unchecked"] {
 }
 ::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(to bottom, hsl(48, 100%, 50%), hsl(35, 100%, 30%)) !important;
+}
+::-webkit-scrollbar-track {
+    background-color: transparent !important;
 }

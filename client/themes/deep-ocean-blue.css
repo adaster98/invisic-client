@@ -1,40 +1,44 @@
 /**
  * Theme Name: Deep Ocean Blue
- * Description: A sleek, extra-dark blue theme for Kloak.
+ * Description: A sleek, extra-dark blue theme for Invisic.
  * Author: Aster
  */
 
-/* --- 1. Core Variables --- */
+/* Core Variables */
 :root, .dark, [data-theme="dark"], body {
+    /* Backgrounds */
     --background: 220 40% 8% !important;
     --layout-chat: 220 40% 8% !important;
     --layout-sidebar: 220 45% 5% !important;
     --layout-members: 220 45% 5% !important;
     --layout-sidebar-secondary: 220 45% 5% !important;
 
+    /* Surfaces & Containers */
     --card: 220 40% 10% !important;
     --popover: 220 40% 10% !important;
     --secondary: 220 40% 15% !important;
     --muted: 220 40% 12% !important;
 
+    /* Borders & Inputs */
     --border: 220 40% 18% !important;
     --input: 220 40% 18% !important;
     --ring: 215 85% 60% !important;
 
+    /* Text */
     --foreground: 220 20% 90% !important;
     --card-foreground: 220 20% 90% !important;
     --popover-foreground: 220 20% 90% !important;
     --secondary-foreground: 220 20% 90% !important;
     --muted-foreground: 220 20% 65% !important;
 
+    /* Primary & Accent */
     --primary: 215 85% 60% !important;
     --primary-foreground: 0 0% 100% !important;
     --accent: 220 40% 20% !important;
     --accent-foreground: 220 20% 90% !important;
-
 }
 
-/* --- 2. Layout Overrides --- */
+/* Layout Overrides */
 .bg-layout-sidebar, .bg-layout-members {
     background-color: hsl(220, 45%, 5%) !important;
 }
@@ -53,6 +57,7 @@
     border-color: hsl(220, 40%, 18%) !important;
 }
 
+/* Resize Handles */
 [data-resize-handle]::after {
     background-color: hsl(220, 40%, 18%) !important;
 }
@@ -61,22 +66,21 @@
     background-color: hsl(215, 85%, 60%, 0.5) !important;
 }
 
-/* --- 3. Native Kloak Slider (Radix) --- */
-/* Track background */
+/* Slider */
 span[data-orientation="horizontal"]:not([dir]):not([role]) {
     background-color: hsl(var(--secondary)) !important;
 }
-/* Range fill — has inline gradient style, needs !important to override */
 span[data-orientation="horizontal"]:not([dir]):not([role]) > span[data-orientation="horizontal"] {
     background: hsl(var(--primary)) !important;
 }
-/* Thumb */
+
+/* Slider Thumb */
 span[role="slider"][data-orientation="horizontal"] {
     background-color: hsl(var(--background)) !important;
     border-color: hsl(var(--primary)) !important;
 }
 
-/* --- 5. Scrollbars --- */
+/* Scrollbars */
 ::-webkit-scrollbar-thumb {
     background-color: hsl(220, 40%, 19%) !important;
     border-radius: 10px;
