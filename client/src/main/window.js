@@ -306,7 +306,7 @@ function createWindow() {
   mainWindow.on("maximize", () => {
     mainWindow.webContents
       .executeJavaScript(
-        'document.documentElement.classList.add("kloak-maximized"); document.body.classList.add("kloak-maximized");',
+        'document.documentElement.classList.add("invisic-maximized"); document.body.classList.add("invisic-maximized");',
       )
       .catch(() => {});
   });
@@ -314,7 +314,7 @@ function createWindow() {
   mainWindow.on("unmaximize", () => {
     mainWindow.webContents
       .executeJavaScript(
-        'document.documentElement.classList.remove("kloak-maximized"); document.body.classList.remove("kloak-maximized");',
+        'document.documentElement.classList.remove("invisic-maximized"); document.body.classList.remove("invisic-maximized");',
       )
       .catch(() => {});
   });
