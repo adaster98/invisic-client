@@ -2,14 +2,16 @@
   // ── Shared feature config ─────────────────────────────────────────────────
   // Single read/write to feature-config.json for all native features.
   let featureConfig = {};
+  let _activeUserId = null;
   try {
-    featureConfig = (await window.electronAPI.getFeatureConfig()) || {};
+    _activeUserId = await window.electronAPI?.getActiveUserId?.();
+    featureConfig = (await window.electronAPI.getFeatureConfig(_activeUserId)) || {};
   } catch (e) {
     console.error("[Invisic] native-features: failed to load config:", e);
   }
 
   const saveFeatureConfig = () => {
-    window.electronAPI.saveFeatureConfig(featureConfig).catch((e) =>
+    window.electronAPI.saveFeatureConfig(featureConfig, _activeUserId).catch((e) =>
       console.error("[Invisic] native-features: failed to save config:", e)
     );
   };

@@ -47,6 +47,13 @@ class InvisicAddonAPI {
     // Store original fetch BEFORE anything can patch it
     this._originalFetch = window.fetch.bind(window);
 
+    // Per-user instancing: resolve active user ID early for config routing
+    this._activeUserId = null;
+    this._activeUserIdPromise = window.electronAPI?.getActiveUserId?.() || Promise.resolve(null);
+    this._activeUserIdPromise.then((id) => {
+      if (id) this._activeUserId = id;
+    });
+
     this._log("Initialising...");
 
     // --- Public API namespaces ---
@@ -54,32 +61,57 @@ class InvisicAddonAPI {
     this.settings = {
       get: async (addonId) => {
         if (window.electronAPI && window.electronAPI.getAddonConfig) {
-          return await window.electronAPI.getAddonConfig(addonId);
+          const userId = this._activeUserId || await this._activeUserIdPromise;
+          return await window.electronAPI.getAddonConfig(addonId, userId);
         }
         return {};
       },
-      set: (addonId, data) => {
+      set: async (addonId, data) => {
         if (window.electronAPI && window.electronAPI.saveAddonConfig) {
-          window.electronAPI.saveAddonConfig({ addonId, data });
+          const userId = this._activeUserId || await this._activeUserIdPromise;
+          window.electronAPI.saveAddonConfig({ addonId, data, userId });
         }
       },
     };
 
     this.fs = {
       read: async (addonId, filePath) => {
-        return await window.electronAPI.readAddonFile(addonId, filePath);
+        const userId = this._activeUserId || await this._activeUserIdPromise;
+        return await window.electronAPI.readAddonFile(addonId, filePath, { userId });
       },
       write: async (addonId, filePath, data) => {
-        return await window.electronAPI.writeAddonFile(addonId, filePath, data);
+        const userId = this._activeUserId || await this._activeUserIdPromise;
+        return await window.electronAPI.writeAddonFile(addonId, filePath, data, { userId });
       },
       list: async (addonId, subDir = "") => {
-        return await window.electronAPI.listAddonFiles(addonId, subDir);
+        const userId = this._activeUserId || await this._activeUserIdPromise;
+        return await window.electronAPI.listAddonFiles(addonId, subDir, { userId });
       },
       delete: async (addonId, filePath) => {
-        return await window.electronAPI.deleteAddonFile(addonId, filePath);
+        const userId = this._activeUserId || await this._activeUserIdPromise;
+        return await window.electronAPI.deleteAddonFile(addonId, filePath, { userId });
       },
       exists: async (addonId, filePath) => {
-        return await window.electronAPI.addonFileExists(addonId, filePath);
+        const userId = this._activeUserId || await this._activeUserIdPromise;
+        return await window.electronAPI.addonFileExists(addonId, filePath, { userId });
+      },
+      // Shared file storage (not per-user — for ML models, shared assets, etc.)
+      shared: {
+        read: async (addonId, filePath) => {
+          return await window.electronAPI.readAddonFile(addonId, filePath, { shared: true });
+        },
+        write: async (addonId, filePath, data) => {
+          return await window.electronAPI.writeAddonFile(addonId, filePath, data, { shared: true });
+        },
+        list: async (addonId, subDir = "") => {
+          return await window.electronAPI.listAddonFiles(addonId, subDir, { shared: true });
+        },
+        delete: async (addonId, filePath) => {
+          return await window.electronAPI.deleteAddonFile(addonId, filePath, { shared: true });
+        },
+        exists: async (addonId, filePath) => {
+          return await window.electronAPI.addonFileExists(addonId, filePath, { shared: true });
+        },
       },
     };
 
@@ -723,6 +755,11 @@ class InvisicAddonAPI {
     if (data && data.id) {
       this.userProfile = data;
       this.userID = data.id;
+      // Update per-user instancing state
+      this._activeUserId = data.id;
+      if (window.electronAPI?.setActiveUserId) {
+        window.electronAPI.setActiveUserId(data.id);
+      }
       // Also update auth from the request that carried this
       const headers = this._extractHeaders(options);
       this._updateAuth(headers);

@@ -296,8 +296,12 @@ function createWindow() {
   });
 
   mainWindow.webContents.on("did-finish-load", () => {
+    const settings = loadSettings();
+    const cornerEnabled = settings.cornerRoundingEnabled !== false;
+    const cornerRadius = settings.cornerRadius != null ? settings.cornerRadius : 20;
+    const radiusVal = cornerEnabled ? `${cornerRadius}px` : "0px";
     mainWindow.webContents.insertCSS(`
-        html, body { border-radius: 20px; overflow: hidden; background: transparent !important; }
+        html, body { border-radius: ${radiusVal}; overflow: hidden; background: transparent !important; }
         #app, #root, body > div:first-child { background-color: #0f0f0f !important; transition: background-color 0.2s ease; height: 100vh; width: 100vw; }
         .h-9.w-full.border-b { -webkit-app-region: drag !important; user-select: none; }
         .h-9.w-full.border-b button { -webkit-app-region: no-drag !important; cursor: pointer !important; }

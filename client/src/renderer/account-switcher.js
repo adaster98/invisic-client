@@ -9,7 +9,7 @@
   const SWITCH_LOADING_MIN_MS = 1400;
   const SWITCH_LOADING_FADE_IN_MS = 220;
   const SWITCH_LOADING_FADE_OUT_MS = 280;
-  const SWITCH_LOGIN_WATCHDOG_MS = 100;
+  const SWITCH_LOGIN_WATCHDOG_MS = 250;
   const SWITCH_TRACE_KEY = "invisic-switch-trace";
   const SWITCH_TRACE_MAX = 500;
 
@@ -468,6 +468,10 @@
       });
       sessionStorage.setItem("invisic-pending-secret-key", secretKey);
       sessionStorage.setItem("invisic-pending-key-hash", pendingKeyHash);
+      // Set active user ID before reload so per-user configs load correctly
+      if (window.electronAPI?.setActiveUserId && account.id && !account.id.startsWith("pending-")) {
+        window.electronAPI.setActiveUserId(account.id);
+      }
       let existingAuth = {};
       try {
         existingAuth = JSON.parse(localStorage.getItem("kloak-auth") || "{}");
@@ -521,6 +525,10 @@
           info: `id=${api?.userID || ""} xHash=${redact((api?.xHash || "").toLowerCase(), 6, 4)}`,
         });
         currentUserId = api.userID;
+        // Persist active user ID for per-user config routing
+        if (window.electronAPI?.setActiveUserId && currentUserId) {
+          window.electronAPI.setActiveUserId(currentUserId);
+        }
         const profile = api.userProfile;
         const avatarUrl =
           profile?.avatar_url || profile?.avatarUrl || null;
@@ -776,7 +784,6 @@
       min-width: 240px;
       max-width: 300px;
       z-index: 99999999;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
       animation: ias-flyout-in 0.12s ease;
     `;
 
@@ -997,7 +1004,7 @@
         </button>
       </div>
       <div class="ias-manage-account-list" id="ias-manage-list"></div>
-      <div class="invisic-modal-footer" style="flex-direction: column; gap: 8px; margin-top: 0;">
+      <div class="invisic-modal-footer" style="flex-direction: row; gap: 8px; margin-top: 0;">
         <button class="invisic-btn-secondary ias-add-current-btn" id="ias-manage-add-current">
           Save Current Account
         </button>

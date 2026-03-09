@@ -1,9 +1,19 @@
 (() => {
   const STYLE_TAG_ID = "invisic-theme-style";
 
+  // Cache the active user ID for per-user theme persistence
+  let _activeUserId = null;
+  const getActiveUserId = async () => {
+    if (!_activeUserId) {
+      _activeUserId = await window.electronAPI?.getActiveUserId?.();
+    }
+    return _activeUserId;
+  };
+
   async function getSavedTheme() {
     try {
-      const config = await window.electronAPI.getFeatureConfig();
+      const userId = await getActiveUserId();
+      const config = await window.electronAPI.getFeatureConfig(userId);
       return config.selectedTheme ?? "";
     } catch (e) {
       console.error("[Theme Engine] Failed to load theme preference:", e);
@@ -13,9 +23,10 @@
 
   async function saveThemePreference(filename) {
     try {
-      const config = await window.electronAPI.getFeatureConfig();
+      const userId = await getActiveUserId();
+      const config = await window.electronAPI.getFeatureConfig(userId);
       config.selectedTheme = filename;
-      await window.electronAPI.saveFeatureConfig(config);
+      await window.electronAPI.saveFeatureConfig(config, userId);
     } catch (e) {
       console.error("[Theme Engine] Failed to save theme preference:", e);
     }

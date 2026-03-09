@@ -13,6 +13,7 @@ class InvisicAddonManager {
     // App store data cache
     this._storeCache = null;
     this._storeCacheTime = 0;
+    this._activeUserId = null;
 
     // Register MutationObserver BEFORE any async/await calls so it is always
     // active from the first synchronous tick. If both awaits below were placed
@@ -32,8 +33,11 @@ class InvisicAddonManager {
     this.checkForSettingsMenu();
 
     try {
+      if (window.electronAPI && window.electronAPI.getActiveUserId) {
+        this._activeUserId = await window.electronAPI.getActiveUserId();
+      }
       if (window.electronAPI && window.electronAPI.getAddonStates) {
-        this.states = await window.electronAPI.getAddonStates();
+        this.states = await window.electronAPI.getAddonStates(this._activeUserId);
       }
       if (window.electronAPI && window.electronAPI.getLocalVersions) {
         this.localVersions = await window.electronAPI.getLocalVersions();
@@ -99,6 +103,12 @@ class InvisicAddonManager {
       "w-full flex items-center gap-2.5 text-sm font-medium px-3 py-2 rounded-md transition-colors text-muted-foreground hover:bg-secondary/60 hover:text-foreground";
     appearanceBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M18.37 2.63 14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 7l9 9 1.59-1.59a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3Z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/><path d="M14.5 17.5 4.5 15"/></svg>Themes`;
 
+    const invisicSettingsBtn = document.createElement("button");
+    invisicSettingsBtn.id = "invisic-nav-client-settings";
+    invisicSettingsBtn.className =
+      "w-full flex items-center gap-2.5 text-sm font-medium px-3 py-2 rounded-md transition-colors text-muted-foreground hover:bg-secondary/60 hover:text-foreground";
+    invisicSettingsBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>Invisic Settings`;
+
     let settingsModal = nav.closest('[role="dialog"]') || document.body;
     if (window.getComputedStyle(settingsModal).position === "static")
       settingsModal.style.position = "relative";
@@ -114,9 +124,11 @@ class InvisicAddonManager {
     if (divider) {
       nav.insertBefore(addonBtn, divider);
       nav.insertBefore(appearanceBtn, divider);
+      nav.insertBefore(invisicSettingsBtn, divider);
     } else {
       nav.insertBefore(addonBtn, logOutBtn);
       nav.insertBefore(appearanceBtn, logOutBtn);
+      nav.insertBefore(invisicSettingsBtn, logOutBtn);
     }
 
     const NAV_INACTIVE =
@@ -127,6 +139,7 @@ class InvisicAddonManager {
     addonBtn.addEventListener("click", (e) => {
       e.preventDefault();
       appearanceBtn.className = NAV_INACTIVE;
+      invisicSettingsBtn.className = NAV_INACTIVE;
       this.activateAddonTab(
         nav,
         addonBtn,
@@ -137,6 +150,7 @@ class InvisicAddonManager {
     appearanceBtn.addEventListener("click", (e) => {
       e.preventDefault();
       addonBtn.className = NAV_INACTIVE;
+      invisicSettingsBtn.className = NAV_INACTIVE;
       this.activateAppearanceTab(
         nav,
         appearanceBtn,
@@ -144,9 +158,20 @@ class InvisicAddonManager {
       );
     });
 
+    invisicSettingsBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      addonBtn.className = NAV_INACTIVE;
+      appearanceBtn.className = NAV_INACTIVE;
+      this.activateInvisicSettingsTab(
+        nav,
+        invisicSettingsBtn,
+        document.getElementById("invisic-addon-pane"),
+      );
+    });
+
     nav
       .querySelectorAll(
-        "button:not(#invisic-nav-addons):not(#invisic-nav-appearance)",
+        "button:not(#invisic-nav-addons):not(#invisic-nav-appearance):not(#invisic-nav-client-settings)",
       )
       .forEach((btn) => {
         btn.addEventListener("click", () => {
@@ -157,6 +182,7 @@ class InvisicAddonManager {
               .classList.remove("active");
             addonBtn.className = NAV_INACTIVE;
             appearanceBtn.className = NAV_INACTIVE;
+            invisicSettingsBtn.className = NAV_INACTIVE;
           }
         });
       });
@@ -232,7 +258,7 @@ class InvisicAddonManager {
 
     let saved = "";
     try {
-      const config = await window.electronAPI.getFeatureConfig();
+      const config = await window.electronAPI.getFeatureConfig(this._activeUserId);
       saved = config.selectedTheme ?? "";
     } catch (e) {
       console.error("[Themes UI] Failed to load saved theme:", e);
@@ -328,6 +354,236 @@ class InvisicAddonManager {
         tile.classList.add("theme-tile-selected");
         document.dispatchEvent(new CustomEvent("invisic-apply-theme", { detail: tile.dataset.value }));
       });
+    });
+  }
+
+  activateInvisicSettingsTab(nav, invisicSettingsBtn, addonPane) {
+    this.isActive = true;
+    const offset = this.getTopOffset();
+    addonPane.style.top = `${offset}px`;
+
+    nav.querySelectorAll("button").forEach((btn) => {
+      if (
+        btn.id !== "invisic-nav-client-settings" &&
+        !btn.classList.contains("text-destructive")
+      ) {
+        btn.className =
+          "w-full flex items-center gap-2.5 text-sm font-medium px-3 py-2 rounded-md transition-colors text-muted-foreground hover:bg-secondary/60 hover:text-foreground";
+      }
+    });
+
+    invisicSettingsBtn.className =
+      "w-full flex items-center gap-2.5 text-sm font-medium px-3 py-2 rounded-md transition-colors bg-primary text-primary-foreground";
+    this.renderInvisicSettingsUI(addonPane);
+    addonPane.classList.add("active");
+  }
+
+  async renderInvisicSettingsUI(container) {
+    container.innerHTML = `
+      <div class="invisic-esc-wrapper">
+        <button id="invisic-addon-close" aria-label="Close" class="invisic-esc-button">
+          <div class="invisic-esc-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="invisic-esc-icon"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+          </div>
+          <span class="invisic-esc-label">ESC</span>
+        </button>
+      </div>
+      <div class="addon-header-container">
+        <h2>Invisic Settings</h2>
+        <p>Client configuration and update options</p>
+      </div>
+      <div id="invisic-client-settings-body">
+        <p style="color: hsl(var(--muted-foreground)); font-size: 13px;">Loading...</p>
+      </div>
+    `;
+
+    container.querySelector("#invisic-addon-close")?.addEventListener("click", () =>
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }))
+    );
+
+    let appVersion = "—";
+    let clientSettings = { cornerRoundingEnabled: true, cornerRadius: 20 };
+
+    try {
+      appVersion = await window.electronAPI.getAppVersion();
+    } catch (e) {}
+    try {
+      const saved = await window.electronAPI.getClientSettings();
+      if (saved) {
+        if (saved.cornerRoundingEnabled !== undefined) clientSettings.cornerRoundingEnabled = saved.cornerRoundingEnabled;
+        if (saved.cornerRadius !== undefined) clientSettings.cornerRadius = saved.cornerRadius;
+      }
+    } catch (e) {}
+
+    const body = container.querySelector("#invisic-client-settings-body");
+    body.innerHTML = `
+      <div class="isettings-body">
+
+        <div class="isettings-section-card">
+          <div class="isettings-section-header">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 text-muted-foreground"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            <h3 class="text-sm font-medium">About</h3>
+          </div>
+          <div class="isettings-inner-row">
+            <div>
+              <p class="text-sm font-medium">Version</p>
+              <p class="text-xs text-muted-foreground" style="margin-top:2px;">Current installed version of Invisic</p>
+            </div>
+            <span class="isettings-version-badge">v${appVersion}</span>
+          </div>
+          <div class="isettings-inner-row">
+            <div>
+              <p class="text-sm font-medium">Updates</p>
+              <p class="text-xs text-muted-foreground" style="margin-top:2px;">Check Codeberg for a newer release</p>
+            </div>
+            <div class="isettings-ctrl-group">
+              <button id="invisic-check-update-btn" class="isettings-update-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                Check for Updates
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="isettings-section-card">
+          <div class="isettings-section-header">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 text-muted-foreground"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/></svg>
+            <h3 class="text-sm font-medium">Window</h3>
+          </div>
+          <div class="isettings-inner-row">
+            <div>
+              <p class="text-sm font-medium">Corner Rounding</p>
+              <p class="text-xs text-muted-foreground" style="margin-top:2px;">Round the corners of the client window</p>
+            </div>
+            <button type="button" role="switch" id="invisic-corner-toggle"
+              aria-checked="${clientSettings.cornerRoundingEnabled}"
+              data-state="${clientSettings.cornerRoundingEnabled ? "checked" : "unchecked"}"
+              class="addon-toggle peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors data-[state=checked]:bg-primary data-[state=unchecked]:bg-input focus-visible:outline-none">
+              <span data-state="${clientSettings.cornerRoundingEnabled ? "checked" : "unchecked"}"
+                class="pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0"></span>
+            </button>
+          </div>
+          <div class="isettings-inner-row" id="invisic-radius-row" style="${clientSettings.cornerRoundingEnabled ? "" : "opacity:0.4;pointer-events:none;"}">
+            <div>
+              <p class="text-sm font-medium">Corner Radius</p>
+              <p class="text-xs text-muted-foreground" style="margin-top:2px;">Adjust how rounded the corners appear</p>
+            </div>
+            <div class="isettings-ctrl-group">
+              <input type="range" id="invisic-radius-slider" class="invisic-slider" min="0" max="40" step="1" value="${clientSettings.cornerRadius}">
+              <span id="invisic-radius-value" class="isettings-radius-value">${clientSettings.cornerRadius}px</span>
+              <button id="invisic-radius-reset" class="invisic-btn-secondary" style="font-size:12px;padding:4px 10px;">Reset</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    `;
+
+    // --- Update Check ---
+    const checkBtn = body.querySelector("#invisic-check-update-btn");
+    let _updateResetTimer = null;
+
+    const resetCheckBtn = () => {
+      checkBtn.textContent = "";
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("width", "14"); svg.setAttribute("height", "14");
+      svg.setAttribute("viewBox", "0 0 24 24"); svg.setAttribute("fill", "none");
+      svg.setAttribute("stroke", "currentColor"); svg.setAttribute("stroke-width", "2");
+      svg.setAttribute("stroke-linecap", "round"); svg.setAttribute("stroke-linejoin", "round");
+      svg.innerHTML = `<path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/>`;
+      checkBtn.appendChild(svg);
+      checkBtn.appendChild(document.createTextNode("Check for Updates"));
+      checkBtn.disabled = false;
+      checkBtn.style.color = "";
+      checkBtn.classList.remove("isettings-update-btn--success", "isettings-update-btn--error", "isettings-update-btn--spin");
+    };
+
+    const onUpdateStatus = (e) => {
+      const detail = e.detail;
+      document.removeEventListener("invisic-update-status", onUpdateStatus);
+      clearTimeout(_updateResetTimer);
+      checkBtn.classList.remove("isettings-update-btn--spin");
+      checkBtn.disabled = false;
+      if (detail.error) {
+        checkBtn.classList.add("isettings-update-btn--error");
+        checkBtn.textContent = "Check failed";
+      } else if (detail.available) {
+        checkBtn.classList.add("isettings-update-btn--success");
+        checkBtn.textContent = `Update available: ${detail.version}`;
+      } else {
+        checkBtn.classList.add("isettings-update-btn--success");
+        checkBtn.textContent = "You're up to date!";
+      }
+      _updateResetTimer = setTimeout(resetCheckBtn, 4000);
+    };
+
+    checkBtn.addEventListener("click", () => {
+      clearTimeout(_updateResetTimer);
+      checkBtn.disabled = true;
+      checkBtn.classList.remove("isettings-update-btn--success", "isettings-update-btn--error");
+      checkBtn.classList.add("isettings-update-btn--spin");
+      checkBtn.textContent = "Checking…";
+      document.addEventListener("invisic-update-status", onUpdateStatus);
+      window.electronAPI.checkForUpdate();
+    });
+
+    // --- Corner Rounding Toggle ---
+    const toggle = body.querySelector("#invisic-corner-toggle");
+    const radiusRow = body.querySelector("#invisic-radius-row");
+    const slider = body.querySelector("#invisic-radius-slider");
+    const radiusValue = body.querySelector("#invisic-radius-value");
+    const resetBtn = body.querySelector("#invisic-radius-reset");
+
+    const updateSliderFill = (el) => {
+      const pct = ((el.value - el.min) / (el.max - el.min)) * 100;
+      el.style.setProperty("--range-percent", pct + "%");
+    };
+    updateSliderFill(slider);
+
+    const applyCornerCSS = (enabled, radius) => {
+      const r = enabled ? `${radius}px` : "0px";
+      document.documentElement.style.borderRadius = r;
+      document.body.style.borderRadius = r;
+    };
+
+    toggle.addEventListener("click", async () => {
+      const nowEnabled = toggle.getAttribute("aria-checked") !== "true";
+      const state = nowEnabled ? "checked" : "unchecked";
+      toggle.setAttribute("aria-checked", nowEnabled);
+      toggle.setAttribute("data-state", state);
+      toggle.querySelector("span").setAttribute("data-state", state);
+      radiusRow.style.opacity = nowEnabled ? "" : "0.4";
+      radiusRow.style.pointerEvents = nowEnabled ? "" : "none";
+      clientSettings.cornerRoundingEnabled = nowEnabled;
+      applyCornerCSS(nowEnabled, parseInt(slider.value, 10));
+      try {
+        await window.electronAPI.saveClientSettings({ cornerRoundingEnabled: nowEnabled, cornerRadius: parseInt(slider.value, 10) });
+      } catch (e) {}
+    });
+
+    slider.addEventListener("input", () => {
+      radiusValue.textContent = `${slider.value}px`;
+      updateSliderFill(slider);
+    });
+
+    slider.addEventListener("change", async () => {
+      const radius = parseInt(slider.value, 10);
+      clientSettings.cornerRadius = radius;
+      applyCornerCSS(toggle.getAttribute("aria-checked") === "true", radius);
+      try {
+        await window.electronAPI.saveClientSettings({ cornerRoundingEnabled: toggle.getAttribute("aria-checked") === "true", cornerRadius: radius });
+      } catch (e) {}
+    });
+
+    resetBtn.addEventListener("click", async () => {
+      slider.value = 20;
+      radiusValue.textContent = "20px";
+      updateSliderFill(slider);
+      clientSettings.cornerRadius = 20;
+      applyCornerCSS(toggle.getAttribute("aria-checked") === "true", 20);
+      try {
+        await window.electronAPI.saveClientSettings({ cornerRoundingEnabled: toggle.getAttribute("aria-checked") === "true", cornerRadius: 20 });
+      } catch (e) {}
     });
   }
 
@@ -518,7 +774,7 @@ class InvisicAddonManager {
           window.electronAPI.log(
             `Invisic Addons: Toggling ${addonId} to ${isNowEnabled}`,
           );
-        window.electronAPI.saveAddonState({ addonId, enabled: isNowEnabled });
+        window.electronAPI.saveAddonState({ addonId, enabled: isNowEnabled, userId: this._activeUserId });
 
         try {
           if (isNowEnabled && addon.onEnable) addon.onEnable();

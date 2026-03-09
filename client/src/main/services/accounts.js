@@ -26,4 +26,21 @@ function saveAccounts(data) {
   }
 }
 
-module.exports = { loadAccounts, saveAccounts };
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function getLastActiveUserId() {
+  const data = loadAccounts();
+  const id = data.lastActiveUserId || null;
+  if (id && !UUID_RE.test(id)) return null;
+  return id;
+}
+
+function setLastActiveUserId(userId) {
+  if (!userId || !UUID_RE.test(userId)) return;
+  const data = loadAccounts();
+  data.lastActiveUserId = userId;
+  saveAccounts(data);
+  console.log(`[Accounts] Set lastActiveUserId: ${userId}`);
+}
+
+module.exports = { loadAccounts, saveAccounts, getLastActiveUserId, setLastActiveUserId };

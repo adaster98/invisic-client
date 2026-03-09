@@ -20,6 +20,7 @@ if (window.electronAPI) {
 
     if (type === "update-status") {
       renderUpdateBanner(detail);
+      document.dispatchEvent(new CustomEvent("invisic-update-status", { detail }));
     } else if (type === "update-progress") {
       updateProgressModal(detail);
     } else if (type === "show-custom-permission") {

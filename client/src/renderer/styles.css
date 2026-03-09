@@ -237,11 +237,22 @@ body.invisic-maximized #invisic-addon-settings-modal { border-radius: 0; }
     appearance: none;
     width: 16px;
     height: 16px;
-    background: hsl(var(--foreground));
+    background: hsl(var(--background));
     border: 2px solid hsl(var(--primary));
     border-radius: 50%;
     cursor: pointer;
     transition: transform 0.1s ease;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+
+.invisic-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: hsl(var(--background));
+    border: 2px solid hsl(var(--primary));
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
 }
 
 .invisic-slider::-webkit-slider-thumb:hover {
@@ -402,8 +413,8 @@ input[type="radio"]:checked::after {
     text-align: center; color: hsl(var(--muted-foreground));
     font-size: 14px; padding: 24px 0;
 }
-.ias-add-account-btn { width: 100%; }
-.ias-add-current-btn { width: 100%; }
+.ias-add-account-btn { flex: 1; }
+.ias-add-current-btn { flex: 1; }
 
 /* Text inputs inside modals */
 .ias-text-input {
@@ -434,3 +445,100 @@ input[type="radio"]:checked::after {
     from { opacity: 0; transform: translateX(16px); }
     to   { opacity: 1; transform: translateX(0); }
 }
+
+/* ── Invisic Settings Panel ──────────────────────────────────────────────── */
+
+.isettings-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 560px;
+}
+
+/* Section-level container card (mirrors native p-4 rounded-xl bg-secondary/30 ...) */
+.isettings-section-card {
+    padding: 16px;
+    border-radius: 12px;
+    background: hsl(var(--secondary) / 0.3);
+    border: 1px solid hsl(var(--border) / 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.isettings-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.isettings-section-header svg { color: hsl(var(--muted-foreground)); flex-shrink: 0; }
+.isettings-section-header h3 { margin: 0; }
+
+/* Individual row inside a section card */
+.isettings-inner-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: hsl(var(--background) / 0.3);
+    border: 1px solid hsl(var(--border) / 0.4);
+    transition: opacity 0.2s;
+}
+
+.isettings-ctrl-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.isettings-version-badge {
+    font-size: 13px;
+    font-weight: 600;
+    color: hsl(var(--foreground));
+    background: hsl(var(--secondary));
+    border: 1px solid hsl(var(--border));
+    border-radius: 6px;
+    padding: 4px 10px;
+    flex-shrink: 0;
+}
+
+.isettings-radius-value {
+    font-size: 13px;
+    font-weight: 500;
+    color: hsl(var(--foreground));
+    min-width: 36px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+/* Compact update check button */
+.isettings-update-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid hsl(var(--border));
+    background: hsl(var(--secondary));
+    color: hsl(var(--muted-foreground));
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.isettings-update-btn:hover:not(:disabled) {
+    color: hsl(var(--foreground));
+    border-color: hsl(var(--muted-foreground) / 0.4);
+}
+.isettings-update-btn:disabled { opacity: 0.6; cursor: default; }
+.isettings-update-btn--success { color: hsl(var(--primary)) !important; border-color: hsl(var(--primary) / 0.4) !important; }
+.isettings-update-btn--error   { color: hsl(var(--destructive)) !important; border-color: hsl(var(--destructive) / 0.4) !important; }
+
+/* Constrain the radius slider width inside the settings ctrl group */
+.isettings-ctrl-group .invisic-slider { width: 120px; margin: 0; }

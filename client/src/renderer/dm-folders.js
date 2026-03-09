@@ -31,9 +31,14 @@
   ];
 
   // ── Persistence (feature-config.json) ──
+  let _activeUserId = null;
+
   const loadConfig = async () => {
     try {
-      const saved = await window.electronAPI.getFeatureConfig();
+      if (!_activeUserId) {
+        _activeUserId = await window.electronAPI?.getActiveUserId?.();
+      }
+      const saved = await window.electronAPI.getFeatureConfig(_activeUserId);
       if (saved && saved.dmFolders && saved.dmFolders.folders) {
         config.folders = saved.dmFolders.folders;
       }
@@ -44,9 +49,9 @@
 
   const saveConfig = async () => {
     try {
-      const current = (await window.electronAPI.getFeatureConfig()) || {};
+      const current = (await window.electronAPI.getFeatureConfig(_activeUserId)) || {};
       current.dmFolders = config;
-      window.electronAPI.saveFeatureConfig(current).catch((e) =>
+      window.electronAPI.saveFeatureConfig(current, _activeUserId).catch((e) =>
         console.error("[dm-folders] Failed to save config:", e)
       );
     } catch (e) {

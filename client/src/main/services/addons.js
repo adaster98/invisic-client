@@ -6,13 +6,20 @@ let addonsDir = !app.isPackaged
     ? path.join(app.getAppPath(), 'addons')
     : path.join(app.getPath('userData'), 'addons');
 
-let addonStatesPath = path.join(addonsDir, 'addon-states.json');
+// Data dir always lives in userData — keeps configs/states out of the repo tree in dev
+let addonsDataDir = path.join(app.getPath('userData'), 'addons');
+
+let addonStatesPath = path.join(addonsDataDir, 'addon-states.json');
 
 if (!fs.existsSync(addonsDir)) {
     fs.mkdirSync(addonsDir, { recursive: true });
 }
+if (!fs.existsSync(addonsDataDir)) {
+    fs.mkdirSync(addonsDataDir, { recursive: true });
+}
 
-console.log(`[Addons] Directory: ${addonsDir}`);
+console.log(`[Addons] Code directory: ${addonsDir}`);
+console.log(`[Addons] Data directory: ${addonsDataDir}`);
 console.log(`[Addons] States file: ${addonStatesPath}`);
 
 
@@ -29,6 +36,7 @@ function openAddonsFolder(subPath) {
 
 module.exports = {
     addonsDir,
+    addonsDataDir,
     addonStatesPath,
     openAddonsFolder
 };

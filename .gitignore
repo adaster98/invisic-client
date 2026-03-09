@@ -3,6 +3,8 @@ client/dist/
 ENGINEER_SPEC.md
 .agents/
 client/addons/addon-states.json
+client/addons/addon-states-*.json
+client/addons/*/[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]-*/
 client/addons/developer-toolkit/config.json
 client/addons/quick-react/index.json
 client/addons/quick-react/config.json

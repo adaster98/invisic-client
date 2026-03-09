@@ -2,6 +2,13 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 let modalCallback = null;
 
+// Cache the active userId so all config calls auto-inject it
+let _cachedUserId = null;
+// Eagerly resolve from main on startup
+ipcRenderer.invoke("get-active-user-id").then((id) => {
+  if (id) _cachedUserId = id;
+});
+
 const api = {
   minimize: () => ipcRenderer.send("window-min"),
   maximize: () => ipcRenderer.send("window-max"),
@@ -28,21 +35,29 @@ const api = {
   openExternalUrl: (url) => ipcRenderer.send("open-external-url", url),
   openAddonsFolder: (subPath) =>
     ipcRenderer.send("open-addons-folder", subPath),
-  getAddonStates: () => ipcRenderer.invoke("get-addon-states"),
-  saveAddonState: (data) => ipcRenderer.send("save-addon-state", data),
+  getAddonStates: (userId) => ipcRenderer.invoke("get-addon-states", userId || _cachedUserId),
+  saveAddonState: (data) => ipcRenderer.send("save-addon-state", { ...data, userId: data.userId || _cachedUserId }),
   getLocalVersions: () => ipcRenderer.invoke("get-local-versions"),
   installAddon: (data) => ipcRenderer.invoke("install-addon", data),
   fetchStoreData: () => ipcRenderer.invoke("fetch-store-data"),
-  getAddonConfig: (addonId) => ipcRenderer.invoke("get-addon-config", addonId),
-  saveAddonConfig: (data) => ipcRenderer.send("save-addon-config", data),
-  getFeatureConfig: () => ipcRenderer.invoke("get-feature-config"),
-  saveFeatureConfig: (data) => ipcRenderer.invoke("save-feature-config", data),
+  getAddonConfig: (addonId, userId) => {
+    const effectiveId = userId || _cachedUserId;
+    return ipcRenderer.invoke("get-addon-config", effectiveId ? { addonId, userId: effectiveId } : addonId);
+  },
+  saveAddonConfig: (data) =>
+    ipcRenderer.send("save-addon-config", { ...data, userId: data.userId || _cachedUserId }),
+  getFeatureConfig: (userId) => ipcRenderer.invoke("get-feature-config", userId || _cachedUserId),
+  saveFeatureConfig: (data, userId) => {
+    const effectiveId = userId || _cachedUserId;
+    return ipcRenderer.invoke("save-feature-config", effectiveId ? { data, userId: effectiveId } : data);
+  },
   getAccounts: () => ipcRenderer.invoke("get-accounts"),
   saveAccounts: (data) => ipcRenderer.invoke("save-accounts", data),
-  getUserAddonConfig: (addonId, userId) =>
-    ipcRenderer.invoke("get-user-addon-config", { addonId, userId }),
-  saveUserAddonConfig: (addonId, userId, data) =>
-    ipcRenderer.invoke("save-user-addon-config", { addonId, userId, data }),
+  getActiveUserId: () => ipcRenderer.invoke("get-active-user-id"),
+  setActiveUserId: (userId) => {
+    _cachedUserId = userId;
+    ipcRenderer.send("set-active-user-id", userId);
+  },
   getThemeFiles: () => ipcRenderer.invoke("get-theme-files"),
   openUserThemesFolder: () => ipcRenderer.send("open-user-themes-folder"),
   startUpdate: (version) => ipcRenderer.send("start-update", { version }),
@@ -54,18 +69,22 @@ const api = {
   translateText: (text, src, tgt) =>
     ipcRenderer.invoke("translate-text", { text, src, tgt }),
   platform: process.platform,
+  getAppVersion: () => ipcRenderer.invoke("get-app-version"),
+  checkForUpdate: () => ipcRenderer.send("check-custom-update"),
+  getClientSettings: () => ipcRenderer.invoke("get-client-settings"),
+  saveClientSettings: (data) => ipcRenderer.invoke("save-client-settings", data),
 
   // FS API for Addons
-  readAddonFile: (addonId, filePath) =>
-    ipcRenderer.invoke("addon-fs-read", { addonId, filePath }),
-  writeAddonFile: (addonId, filePath, data) =>
-    ipcRenderer.invoke("addon-fs-write", { addonId, filePath, data }),
-  listAddonFiles: (addonId, subDir) =>
-    ipcRenderer.invoke("addon-fs-list", { addonId, subDir }),
-  deleteAddonFile: (addonId, filePath) =>
-    ipcRenderer.invoke("addon-fs-delete", { addonId, filePath }),
-  addonFileExists: (addonId, filePath) =>
-    ipcRenderer.invoke("addon-fs-exists", { addonId, filePath }),
+  readAddonFile: (addonId, filePath, { userId, shared } = {}) =>
+    ipcRenderer.invoke("addon-fs-read", { addonId, filePath, userId, shared }),
+  writeAddonFile: (addonId, filePath, data, { userId, shared } = {}) =>
+    ipcRenderer.invoke("addon-fs-write", { addonId, filePath, data, userId, shared }),
+  listAddonFiles: (addonId, subDir, { userId, shared } = {}) =>
+    ipcRenderer.invoke("addon-fs-list", { addonId, subDir, userId, shared }),
+  deleteAddonFile: (addonId, filePath, { userId, shared } = {}) =>
+    ipcRenderer.invoke("addon-fs-delete", { addonId, filePath, userId, shared }),
+  addonFileExists: (addonId, filePath, { userId, shared } = {}) =>
+    ipcRenderer.invoke("addon-fs-exists", { addonId, filePath, userId, shared }),
 
   // Generic send/invoke for compatibility shims
   send: (channel, ...args) => {
@@ -78,6 +97,8 @@ const api = {
       "start-update",
       "quit-and-install",
       "debug-update-trigger",
+      "set-active-user-id",
+      "check-custom-update",
     ];
 
     // Map common aliases
@@ -123,8 +144,12 @@ const api = {
       "translate-text",
       "get-accounts",
       "save-accounts",
-      "get-user-addon-config",
-      "save-user-addon-config",
+      "get-active-user-id",
+      "get-feature-config",
+      "save-feature-config",
+      "get-app-version",
+      "get-client-settings",
+      "save-client-settings",
     ];
     if (allowedChannels.includes(channel)) {
       return ipcRenderer.invoke(channel, ...args);
