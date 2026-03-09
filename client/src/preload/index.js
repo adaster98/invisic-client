@@ -37,6 +37,12 @@ const api = {
   saveAddonConfig: (data) => ipcRenderer.send("save-addon-config", data),
   getFeatureConfig: () => ipcRenderer.invoke("get-feature-config"),
   saveFeatureConfig: (data) => ipcRenderer.invoke("save-feature-config", data),
+  getAccounts: () => ipcRenderer.invoke("get-accounts"),
+  saveAccounts: (data) => ipcRenderer.invoke("save-accounts", data),
+  getUserAddonConfig: (addonId, userId) =>
+    ipcRenderer.invoke("get-user-addon-config", { addonId, userId }),
+  saveUserAddonConfig: (addonId, userId, data) =>
+    ipcRenderer.invoke("save-user-addon-config", { addonId, userId, data }),
   getThemeFiles: () => ipcRenderer.invoke("get-theme-files"),
   openUserThemesFolder: () => ipcRenderer.send("open-user-themes-folder"),
   startUpdate: (version) => ipcRenderer.send("start-update", { version }),
@@ -115,6 +121,10 @@ const api = {
       "unload-translator",
       "delete-translator-cache",
       "translate-text",
+      "get-accounts",
+      "save-accounts",
+      "get-user-addon-config",
+      "save-user-addon-config",
     ];
     if (allowedChannels.includes(channel)) {
       return ipcRenderer.invoke(channel, ...args);

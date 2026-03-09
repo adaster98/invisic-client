@@ -366,3 +366,71 @@ input[type="radio"]:checked::after {
     color: hsl(var(--muted-foreground));
     text-align: right;
 }
+
+/* ── Account Switcher ────────────────────────────────────────────────────── */
+
+/* Save-account toast */
+.invisic-account-save-toast {
+    position: fixed; bottom: 20px; right: 20px; z-index: 9999999;
+    background: hsl(var(--card)); border: 1px solid hsl(var(--border));
+    border-radius: 12px; padding: 14px 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    display: flex; flex-direction: column; gap: 10px;
+    font-size: 13px; color: hsl(var(--foreground));
+    max-width: 280px;
+    animation: invisic-slide-in-right 0.25s ease;
+}
+.ias-toast-text { line-height: 1.4; }
+.ias-toast-actions { display: flex; gap: 8px; }
+.ias-toast-actions .invisic-btn-primary,
+.ias-toast-actions .invisic-btn-secondary { padding: 8px 14px; font-size: 12px; flex: 1; }
+
+/* Flyout entrance animation */
+@keyframes ias-flyout-in {
+    from { opacity: 0; transform: translateY(6px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Manage Accounts modal */
+.ias-manage-modal { width: 480px; }
+.ias-manage-account-list {
+    display: flex; flex-direction: column; gap: 4px;
+    max-height: 300px; overflow-y: auto;
+    margin-bottom: 16px; padding-right: 4px;
+}
+.ias-manage-empty {
+    text-align: center; color: hsl(var(--muted-foreground));
+    font-size: 14px; padding: 24px 0;
+}
+.ias-add-account-btn { width: 100%; }
+.ias-add-current-btn { width: 100%; }
+
+/* Text inputs inside modals */
+.ias-text-input {
+    width: 100%; padding: 10px 12px; border-radius: 8px;
+    border: 1px solid hsl(var(--border));
+    background: hsl(var(--background)); color: hsl(var(--foreground));
+    font-size: 14px; outline: none; transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+.ias-text-input:focus { border-color: hsl(var(--primary)); }
+.ias-text-input::placeholder { color: hsl(var(--muted-foreground)); }
+
+/* Input label */
+.ias-input-label {
+    font-size: 11px; color: hsl(var(--muted-foreground));
+    text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;
+}
+
+/* Validation error */
+.ias-add-error {
+    color: #EB1414; font-size: 12px; padding: 6px 10px;
+    background: rgba(235,20,20,0.08); border-radius: 6px;
+    border: 1px solid rgba(235,20,20,0.2);
+}
+
+/* Toast entrance animation */
+@keyframes invisic-slide-in-right {
+    from { opacity: 0; transform: translateX(16px); }
+    to   { opacity: 1; transform: translateX(0); }
+}

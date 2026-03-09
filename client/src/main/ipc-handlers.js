@@ -8,6 +8,7 @@ const {
   setScreenSources,
 } = require("./window");
 const { loadSettings, saveSettings } = require("./services/settings");
+const { loadAccounts, saveAccounts } = require("./services/accounts");
 const {
   openAddonsFolder,
   addonsDir,
@@ -352,6 +353,58 @@ function registerIpcHandlers() {
       return { success: true };
     } catch (e) {
       return { success: false, error: e.message };
+    }
+  });
+
+  // --- Account Management ---
+
+  ipcMain.handle("get-accounts", () => {
+    console.log("[IPC] get-accounts (handle) received");
+    return loadAccounts();
+  });
+
+  ipcMain.handle("save-accounts", (event, data) => {
+    console.log("[IPC] save-accounts (handle) received");
+    try {
+      saveAccounts(data);
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  // Per-user addon config — infrastructure for future addon instancing.
+  // Writes config-{userId}.json alongside the shared config.json.
+  ipcMain.handle("get-user-addon-config", (event, { addonId, userId }) => {
+    console.log("[IPC] get-user-addon-config received:", { addonId, userId });
+    if (!/^[0-9a-f-]{36}$/.test(userId)) return {};
+    const configPath = path.join(addonsDir, addonId, `config-${userId}.json`);
+    if (fs.existsSync(configPath)) {
+      try {
+        return JSON.parse(fs.readFileSync(configPath, "utf8"));
+      } catch (e) {}
+    }
+    return {};
+  });
+
+  ipcMain.handle("save-user-addon-config", (event, { addonId, userId, data }) => {
+    console.log("[IPC] save-user-addon-config received:", { addonId, userId });
+    if (!/^[0-9a-f-]{36}$/.test(userId)) {
+      return { success: false, error: "Invalid userId" };
+    }
+    try {
+      const addonFolder = path.join(addonsDir, addonId);
+      if (!fs.existsSync(addonFolder))
+        fs.mkdirSync(addonFolder, { recursive: true });
+      fs.writeFileSync(
+        path.join(addonFolder, `config-${userId}.json`),
+        JSON.stringify(data, null, 4),
+        "utf8",
+      );
+      return { success: true };
+    } catch (err) {
+      console.error("[Addons] Failed to save user addon config:", err);
+      return { success: false, error: err.message };
     }
   });
 

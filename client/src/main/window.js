@@ -156,6 +156,20 @@ function createWindow() {
           .catch(console.error);
       }
 
+      // Inject Account Switcher
+      let accountSwitcherPath = path.join(
+        app.getAppPath(),
+        "src",
+        "renderer",
+        "account-switcher.js",
+      );
+      if (fs.existsSync(accountSwitcherPath)) {
+        const accountSwitcherCode = fs.readFileSync(accountSwitcherPath, "utf8");
+        mainWindow.webContents
+          .executeJavaScript(accountSwitcherCode)
+          .catch(console.error);
+      }
+
       let managerPath = path.join(
         app.getAppPath(),
         "src",
